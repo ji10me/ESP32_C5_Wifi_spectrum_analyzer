@@ -31,6 +31,7 @@ spectrum, waterfall and packet bursts of the 2.4 GHz and 5 GHz bands.
    pip install -r requirements.txt
    ```
 2. **Connect the board**: plug the board's "USB" port (native USB) into the PC and look up its COM port (e.g. in Device Manager).
+   **The COM port number differs from PC to PC** (and can change with the USB socket you use). `COM6` / `COM7` in this README are only examples; use the number shown on your PC.
 3. **Flash the firmware** (first time only): the official images are downloaded automatically, checked against their SHA-256 and written.
    ```powershell
    python flash_c5.py COM7      # replace COM7 with your port
@@ -77,6 +78,8 @@ or give the port explicitly, e.g. `python sdr_fluent.py COM7`.
 
 ## Usage (command details)
 
+Replace `COM6` / `COM7` below with your own COM port (the number differs from PC to PC).
+
 ```powershell
 pip install -r requirements.txt     # first time only
 python flash_c5.py COM6             # first time only: download and flash the firmware
@@ -90,13 +93,13 @@ python sdr_app.py --samples 2048    # samples per capture (default 4096)
 # --freq / --sweep / --samples / --lang work with both GUIs
 ```
 
-Connecting through the board's **"USB" port (native USB Serial/JTAG)** is recommended (COM7 in these examples).
-The "UART" port (CH343, 2 Mbaud, COM6) also works, at about half the transfer speed.
+Connecting through the board's **"USB" port (native USB Serial/JTAG)** is recommended.
+The "UART" port (CH343, 2 Mbaud) also works, at about half the transfer speed.
 
 | Connection | Effective throughput | Update rate (8192 samples) |
 | --- | --- | --- |
-| Native USB (COM7) | 256 kB/s | ~15 /s (4096: 28 /s, 2048: 52 /s) |
-| UART / CH343 (COM6) | 133 kB/s | ~8 /s |
+| Native USB | 256 kB/s | ~15 /s (4096: 28 /s, 2048: 52 /s) |
+| UART / CH343 | 133 kB/s | ~8 /s |
 
 Native USB only sends data once the PC asserts DTR, so `espsdr.py` asserts DTR only for Espressif USB
 (VID 0x303A). RTS stays deasserted, so the board is not reset.
