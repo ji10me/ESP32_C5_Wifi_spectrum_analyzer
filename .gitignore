@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ESP-SDR firmware images (GPL-3.0, ESPARGOS) - flash_c5.py downloads them from the official site
+firmware/
+
+# I/Q recordings (may contain third-party radio communications; do not publish)
+recordings/
