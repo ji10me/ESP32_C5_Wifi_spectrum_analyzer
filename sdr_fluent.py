@@ -963,14 +963,15 @@ class SettingsPage(QWidget):
         v.addWidget(title)
         s = Section("外観")
         self.lang_seg = SegmentedWidget()
+        # item clicks pass a bool; _checked absorbs it so it does not overwrite key / th
         for key, name in i18n.LANGS.items():
-            self.lang_seg.addItem(key, name, lambda key=key: i18n.set_lang(key))
+            self.lang_seg.addItem(key, name, lambda _checked=False, key=key: i18n.set_lang(key))
         self.lang_seg.setCurrentItem(i18n.lang())
         s.row("言語", self.lang_seg)
         self.theme_seg = SegmentedWidget()
         for key, text, th in (("light", "ライト", Theme.LIGHT), ("dark", "ダーク", Theme.DARK),
                               ("auto", "システム", Theme.AUTO)):
-            seg_item(self.theme_seg, key, text, lambda th=th: setTheme(th))
+            seg_item(self.theme_seg, key, text, lambda _checked=False, th=th: setTheme(th))
         self.theme_seg.setCurrentItem("dark" if isDarkTheme() else "light")
         s.row("テーマ", self.theme_seg)
         cm = ComboBox()
