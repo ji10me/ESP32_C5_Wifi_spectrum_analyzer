@@ -7,6 +7,16 @@ ESP32-C5 の内蔵 Wi-Fi 6 デュアルバンド無線を SDR として使い、
 - PC アプリ: Python（PySide6 + PySide6-Fluent-Widgets + pyqtgraph。旧版は tkinter + matplotlib）。このリポジトリのコード
 - プロトコルと実装は [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr) を参考にしています（[謝辞](#謝辞)）
 
+## スクリーンショット
+
+**ライブモード（2.4 GHz、ch6）**: スペクトラム（ピークホールドと平均）、ウォーターフォール、1 回の取得内の受信電力の時間変化
+
+![ライブモード 2.4 GHz](docs/screenshot_live_2.4ghz.png)
+
+**バンドスイープ（5 GHz、5150–5895 MHz）**: 帯域全体のスペクトラムと、20 MHz チャンネルごとの活動量と検出率
+
+![バンドスイープ 5 GHz](docs/screenshot_sweep_5ghz.png)
+
 ## かんたんスタート
 
 **必要なもの**: ESP32-C5 の開発ボード（フラッシュ 2 MB 以上）、USB ケーブル、Python 3.10 以上の PC（Windows で動作確認済み）
