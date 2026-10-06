@@ -7,14 +7,14 @@ are re-labelled by set_lang(); on_change() callbacks redo anything computed.
 The choice is saved in settings.json next to the app.
 """
 import json
+import locale
 import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SETTINGS = os.path.join(HERE, "settings.json")
-LANGS = {"en": "English", "ja": "日本語"}
-DEFAULT_LANG = "en"
+LANGS = {"ja": "日本語", "en": "English"}
 
-_lang = DEFAULT_LANG
+_lang = "ja"
 _bindings = []
 _listeners = []
 
@@ -54,7 +54,7 @@ def set_lang(new, save=True):
 
 
 def load_lang():
-    """Saved choice, else English."""
+    """Saved choice, else the OS language (Japanese -> ja, anything else -> en)."""
     try:
         with open(SETTINGS, encoding="utf-8") as f:
             saved = json.load(f).get("lang")
@@ -62,7 +62,8 @@ def load_lang():
             return saved
     except (OSError, ValueError):
         pass
-    return DEFAULT_LANG
+    name = (locale.getlocale()[0] or "").lower()
+    return "ja" if name.startswith(("ja", "japanese")) else "en"
 
 
 def _save(update):

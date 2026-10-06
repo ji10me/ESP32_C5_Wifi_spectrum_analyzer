@@ -45,7 +45,7 @@ spectrum, waterfall and packet bursts of the 2.4 GHz and 5 GHz bands.
 - Change the center frequency, channel, gain and so on in the right-hand panel
 - **Click** a graph to place a marker, **double-click** to tune to that frequency, **right-click** to remove the marker
 - **Save I/Q** stores the received data in `recordings/`
-- **Settings** (bottom left) → **Language** switches between English and Japanese instantly; the choice is remembered (English on first run)
+- **Settings** (bottom left) → **Language** switches between English and Japanese instantly; the choice is remembered
 
 If it does not work: if you see "No device running the ESP-SDR firmware was found", check that step 3 completed,
 or give the port explicitly, e.g. `python sdr_fluent.py COM7`.
@@ -82,7 +82,7 @@ pip install -r requirements.txt     # first time only
 python flash_c5.py COM6             # first time only: download and flash the firmware
 python sdr_fluent.py                # start (port auto-detected); run_sdr.bat does the same
 python sdr_fluent.py --light        # start with the light theme
-python sdr_fluent.py --lang ja      # start in Japanese (en / ja; default: last used, first run: English)
+python sdr_fluent.py --lang en      # start in English (ja / en; default: last used, first run: OS language)
 python sdr_app.py                   # classic GUI (tkinter)
 python sdr_app.py COM7 --freq 5180  # set port and frequency
 python sdr_app.py COM7 --sweep 5    # start in 5 GHz band sweep (--sweep 2.4 also works)
