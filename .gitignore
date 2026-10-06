@@ -9,3 +9,6 @@ firmware/
 
 # I/Q recordings (may contain third-party radio communications; do not publish)
 recordings/
+
+# Per-user app settings (UI language)
+settings.json

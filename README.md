@@ -1,163 +1,171 @@
-# ESP32-C5 Wi-Fi SDR（2.4 GHz / 5 GHz）
+# ESP32-C5 Wi-Fi SDR (2.4 GHz / 5 GHz)
 
-ESP32-C5 の内蔵 Wi-Fi 6 デュアルバンド無線を SDR として使い、2.4 GHz 帯と 5 GHz 帯の
-スペクトラム・ウォーターフォール・パケットのバーストを PC 上で表示するアプリです。
+**English** | [日本語](README.ja.md)
 
-- ファームウェア: [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr)（GPL-3.0）の公式ビルド済みイメージ
-- PC アプリ: Python（PySide6 + PySide6-Fluent-Widgets + pyqtgraph。旧版は tkinter + matplotlib）。このリポジトリのコード
-- プロトコルと実装は [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr) を参考にしています（[謝辞](#謝辞)）
+A PC app that uses the built-in Wi-Fi 6 dual-band radio of the ESP32-C5 as an SDR and shows the
+spectrum, waterfall and packet bursts of the 2.4 GHz and 5 GHz bands.
 
-## スクリーンショット
+- Firmware: the official prebuilt images of [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr) (GPL-3.0)
+- PC app: Python (PySide6 + PySide6-Fluent-Widgets + pyqtgraph; the classic version uses tkinter + matplotlib) — the code in this repository
+- The protocol and implementation are based on [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr) (see [Acknowledgements](#acknowledgements))
+- The UI can be switched between English and Japanese at run time
 
-**ライブモード（2.4 GHz、ch6）**: スペクトラム（ピークホールドと平均）、ウォーターフォール、1 回の取得内の受信電力の時間変化
+## Screenshots
 
-![ライブモード 2.4 GHz](docs/screenshot_live_2.4ghz.png)
+**Live mode (2.4 GHz, ch6)**: spectrum (peak hold and average), waterfall, and received power over time within one capture
 
-**バンドスイープ（5 GHz、5150–5895 MHz）**: 帯域全体のスペクトラムと、20 MHz チャンネルごとの活動量と検出率
+![Live mode 2.4 GHz](docs/screenshot_live_2.4ghz.png)
 
-![バンドスイープ 5 GHz](docs/screenshot_sweep_5ghz.png)
+**Band sweep (5 GHz, 5150–5895 MHz)**: spectrum of the whole band, and activity and detection rate per 20 MHz channel
 
-## かんたんスタート
+![Band sweep 5 GHz](docs/screenshot_sweep_5ghz.png)
 
-**必要なもの**: ESP32-C5 の開発ボード（フラッシュ 2 MB 以上）、USB ケーブル、Python 3.10 以上の PC（Windows で動作確認済み）
+(The screenshots show the Japanese UI.)
 
-1. **ライブラリを入れる**（初回のみ）
+## Quick start
+
+**You need**: an ESP32-C5 development board (2 MB flash or more), a USB cable, and a PC with Python 3.10 or later (tested on Windows)
+
+1. **Install the libraries** (first time only)
    ```powershell
    pip install -r requirements.txt
    ```
-2. **ボードをつなぐ**: ボードの「USB」端子（ネイティブ USB）を PC につなぎ、デバイスマネージャーなどで COM 番号を確認します。
-3. **ファームウェアを書き込む**（初回のみ）: 公式イメージを自動でダウンロードし、SHA-256 を確認してから書き込みます。
+2. **Connect the board**: plug the board's "USB" port (native USB) into the PC and look up its COM port (e.g. in Device Manager).
+3. **Flash the firmware** (first time only): the official images are downloaded automatically, checked against their SHA-256 and written.
    ```powershell
-   python flash_c5.py COM7      # COM7 は自分のポートに置き換える
+   python flash_c5.py COM7      # replace COM7 with your port
    ```
-4. **起動する**: ポートは自動で見つけます。`run_sdr.bat` をダブルクリックしても起動できます。
+4. **Start the app**: the port is detected automatically. You can also double-click `run_sdr.bat`.
    ```powershell
    python sdr_fluent.py
    ```
 
-**基本の操作**
-- 上部の「ライブ」で 1 つの周波数を、「バンドスイープ」で 2.4 GHz 帯や 5 GHz 帯の全体を表示します
-- 右のパネルで中心周波数・チャンネル・ゲインなどを変えます
-- グラフを **クリック** するとマーカーを置き、**ダブルクリック** するとその周波数に同調し、**右クリック** するとマーカーを消します
-- 「I/Q 保存」で受信データを `recordings/` に保存します
+**Basic operation**
+- **Live** at the top shows one frequency; **Band sweep** shows the whole 2.4 GHz or 5 GHz band
+- Change the center frequency, channel, gain and so on in the right-hand panel
+- **Click** a graph to place a marker, **double-click** to tune to that frequency, **right-click** to remove the marker
+- **Save I/Q** stores the received data in `recordings/`
+- **Settings** (bottom left) → **Language** switches between English and Japanese instantly; the choice is remembered
 
-うまくいかないとき: 「ESP-SDR を実行中のデバイスが見つかりません」と出たら、手順 3 の書き込みが済んでいるか、
-ポートを `python sdr_fluent.py COM7` のように指定して試してください。
+If it does not work: if you see "No device running the ESP-SDR firmware was found", check that step 3 completed,
+or give the port explicitly, e.g. `python sdr_fluent.py COM7`.
 
-## 構成
+## Files
 
-| ファイル | 内容 |
+| File | Contents |
 | --- | --- |
-| `sdr_fluent.py` | **GUI アプリ（WinUI 3 / Fluent Design 風）**。PySide6 + PySide6-Fluent-Widgets + pyqtgraph |
-| `sdr_app.py` | 旧 GUI（tkinter + matplotlib）。追加ライブラリなしで動く版 |
-| `sdr_core.py` | 受信スレッドと信号処理（両 GUI で共通） |
-| `espsdr.py` | ESP-SDR シリアルプロトコルのドライバ（`INFO` / `FREQ` / `GAIN` / `BANDWIDTH` / `CAP16` など） |
-| `wifi_channels.py` | 2.4 / 5 GHz の Wi-Fi チャンネル表（20/40/80/160 MHz、U-NII-1〜4） |
-| `flash_c5.py` | ESP32-C5 にファームウェアを書き込むスクリプト（SHA-256 検証つき） |
-| `run_sdr.bat` / `run_sdr_classic.bat` | Fluent 版 / 旧版の起動用 |
-| `firmware/` | ファームウェアイメージ（`flash_c5.py` が公式サイトからダウンロード。リポジトリには含めません） |
-| `recordings/` | 「I/Q 保存」で保存した I/Q データ（リポジトリには含めません） |
+| `sdr_fluent.py` | **GUI app (WinUI 3 / Fluent Design style)**. PySide6 + PySide6-Fluent-Widgets + pyqtgraph |
+| `sdr_app.py` | Classic GUI (tkinter + matplotlib). Runs without the Qt libraries |
+| `sdr_core.py` | Receive thread and signal processing (shared by both GUIs) |
+| `espsdr.py` | Driver for the ESP-SDR serial protocol (`INFO` / `FREQ` / `GAIN` / `BANDWIDTH` / `CAP16` etc.) |
+| `i18n.py` | UI language (Japanese / English): translation table and run-time switching (shared by both GUIs) |
+| `wifi_channels.py` | 2.4 / 5 GHz Wi-Fi channel tables (20/40/80/160 MHz, U-NII-1 to 4) |
+| `flash_c5.py` | Flashes the firmware onto the ESP32-C5 (with SHA-256 check) |
+| `run_sdr.bat` / `run_sdr_classic.bat` | Launchers for the Fluent / classic version |
+| `firmware/` | Firmware images (downloaded from the official site by `flash_c5.py`; not in the repository) |
+| `recordings/` | I/Q data saved with **Save I/Q** (not in the repository) |
 
-### Fluent 版の画面
+### Fluent UI
 
-- 左のナビゲーション: **スペクトラム** / **デバイス**（接続情報・ログ・保存フォルダ）/ **設定**（ライト・ダーク・システムのテーマ、滝表示の配色）
-- 上部: ライブ / バンドスイープの切り替え、ポート選択、接続、一時停止、I/Q 保存
-- 統計カード: 中心周波数・取得レート・RMS・クリップ・ゲイン（スイープ時はバンド・1 スイープの時間・回数）
-- 右パネル: 周波数 / 受信 / ゲイン / 表示の設定カード
-- グラフは横方向にドラッグで移動、ホイールで拡大
-- **クリック**: マーカーを置き、その周波数・チャンネル・平均レベル・ピーク（dBFS）を表示（受信に合わせて更新。マーカーはドラッグで移動）
-- **ダブルクリック**: その周波数に同調（平均・ピークはリセット）／ **右クリック**: マーカーを消す
+- Left navigation: **Spectrum** / **Device** (connection info, log, recordings folder) / **Settings** (language, light / dark / system theme, waterfall colors)
+- Top: live / band sweep switch, port selection, connect, pause, save I/Q
+- Stat cards: center frequency, capture rate, RMS, clipping, gain (in sweep mode: band, sweep time, sweep count)
+- Right panel: frequency / receiver / gain / display settings
+- Drag a graph horizontally to pan, use the wheel to zoom
+- **Click**: place a marker showing frequency, channel, mean level and peak (dBFS), updated live; drag to move it
+- **Double-click**: tune to that frequency (resets average and peak) / **Right-click**: remove the marker
 
-## 使い方（コマンドの詳細）
+## Usage (command details)
 
 ```powershell
-pip install -r requirements.txt     # 初回のみ
-python flash_c5.py COM6             # 初回のみ: ファームウェアをダウンロードして書き込み
-python sdr_fluent.py                # 起動（ポートは自動検出）。run_sdr.bat でも可
-python sdr_fluent.py --light        # ライトテーマで起動
-python sdr_app.py                   # 旧 GUI（tkinter）
-python sdr_app.py COM7 --freq 5180  # ポートと周波数を指定
-python sdr_app.py COM7 --sweep 5    # 5 GHz 帯スイープで起動（--sweep 2.4 も可）
-python sdr_app.py --samples 2048    # 1 回の取得サンプル数（既定 4096）
-# --freq / --sweep / --samples は sdr_fluent.py でも使えます
+pip install -r requirements.txt     # first time only
+python flash_c5.py COM6             # first time only: download and flash the firmware
+python sdr_fluent.py                # start (port auto-detected); run_sdr.bat does the same
+python sdr_fluent.py --light        # start with the light theme
+python sdr_fluent.py --lang en      # start in English (ja / en; default: last used, first run: OS language)
+python sdr_app.py                   # classic GUI (tkinter)
+python sdr_app.py COM7 --freq 5180  # set port and frequency
+python sdr_app.py COM7 --sweep 5    # start in 5 GHz band sweep (--sweep 2.4 also works)
+python sdr_app.py --samples 2048    # samples per capture (default 4096)
+# --freq / --sweep / --samples / --lang work with both GUIs
 ```
 
-ボードの **「USB」端子（ネイティブ USB Serial/JTAG）** での接続を推奨します（以下の例では COM7）。
-「UART」端子（CH343、2 Mbaud、COM6）でも動きますが、転送速度が約半分になります。
+Connecting through the board's **"USB" port (native USB Serial/JTAG)** is recommended (COM7 in these examples).
+The "UART" port (CH343, 2 Mbaud, COM6) also works, at about half the transfer speed.
 
-| 接続 | 実効転送速度 | 更新レート（8192 サンプル） |
+| Connection | Effective throughput | Update rate (8192 samples) |
 | --- | --- | --- |
-| ネイティブ USB（COM7） | 256 kB/s | 約 15 回/秒（4096: 28 回/秒、2048: 52 回/秒） |
-| UART / CH343（COM6） | 133 kB/s | 約 8 回/秒 |
+| Native USB (COM7) | 256 kB/s | ~15 /s (4096: 28 /s, 2048: 52 /s) |
+| UART / CH343 (COM6) | 133 kB/s | ~8 /s |
 
-ネイティブ USB は PC 側が DTR をオンにしないとデータを送らないため、`espsdr.py` は Espressif の
-USB（VID 0x303A）のときだけ DTR をオンにします（RTS はオフのままなので、ボードはリセットされません）。
+Native USB only sends data once the PC asserts DTR, so `espsdr.py` asserts DTR only for Espressif USB
+(VID 0x303A). RTS stays deasserted, so the board is not reset.
 
-## 機能
+## Features
 
-**ライブモード**（中心周波数固定）
-- スペクトラム（平均とピークホールド）、ウォーターフォール
-- 1 回の取得内の受信電力の時間変化（Wi-Fi パケットのバーストが見える）
-- Wi-Fi チャンネルの帯表示と、選んだチャンネル幅（20/40/80/160 MHz）のハイライト
-- スペクトラムやウォーターフォールをクリックするとマーカーでレベルを表示、ダブルクリックでその周波数へ同調（旧 GUI はクリックで同調）
-- サンプルレート 80/40/20/10/8/4 MS/s、FFT 256〜2048、アナログ帯域 11〜48 MHz
-- AGC と手動ゲイン（0〜83）、DC 除去、LO オフセット
-- I/Q 保存（`.npy`、GNU Radio / inspectrum で読める `.cfile`、メタデータ `.json`）
+**Live mode** (fixed center frequency)
+- Spectrum (average and peak hold), waterfall
+- Received power over time within one capture (Wi-Fi packet bursts are visible)
+- Wi-Fi channel strip and a highlight of the selected channel width (20/40/80/160 MHz)
+- Click the spectrum or waterfall for a level marker, double-click to tune there (the classic GUI tunes on click)
+- Sample rates 80/40/20/10/8/4 MS/s, FFT 256–2048, analog bandwidth 11–48 MHz
+- AGC and manual gain (0–83), DC removal, LO offset
+- I/Q recording (`.npy`, `.cfile` readable by GNU Radio / inspectrum, and `.json` metadata)
 
-**バンドスイープモード**（帯域全体）
-- 2.4 GHz（2400–2500 MHz）: 7 ステップ、約 0.5 秒/スイープ
-- 5 GHz（5150–5895 MHz、ch36–177）: 39 ステップ、約 1.6 秒/スイープ（USB・4096 サンプル時。UART では約 2.7 秒）
-- 20 MHz チャンネルごとの活動量（ピーク − ノイズフロア）と検出率 %
+**Band sweep mode** (whole band)
+- 2.4 GHz (2400–2500 MHz): 7 steps, ~0.5 s per sweep
+- 5 GHz (5150–5895 MHz, ch36–177): 39 steps, ~1.6 s per sweep (USB, 4096 samples; ~2.7 s over UART)
+- Activity per 20 MHz channel (peak − noise floor) and detection rate %
 
-## 実機で確認した特性と注意点
+## Measured behavior and caveats
 
-- **更新レート**: 処理時間のほぼすべてがシリアル転送です（PC 側の FFT は 0.1 ms）。ネイティブ USB でも 256 kB/s が上限です。
-- **観測は「間欠的なスナップショット」**: 1 回の取得は 80 MS/s × 8192 サンプル ≈ 100 µs。
-  取得と取得の間は受信していないため、すべてのパケットが写るわけではありません（ピークホールドで補えます）。
-- **通過帯域**: 平坦なのは中心 ±22 MHz 程度。80 MS/s でも両端はロールオフします。
-  80 MHz と 160 MHz のチャンネルは一度に全幅を見られません（スイープを使ってください）。
-- **5 GHz の LO 漏れ**: 5.45 GHz 以上では LO 周辺 ±5 MHz に局部発振器の漏れ（すそ）が出ます。
-  スイープでは LO から 10〜20 MHz 離れた区間だけをつなぎ合わせて、これを避けています。
-  ライブで見たいチャンネルが LO と重なるときは「LO オフセット」を ±12 / ±16 MHz にしてください。
-- **スイープ中のゲイン**: AGC はステップごとにゲインを変えてしまい、段差になるため、スイープ中は
-  常に手動ゲイン（初期値 60。実測でノイズフロアが見え、飽和しにくい値）を使います。
-- **レベル**: dBFS は未校正の相対値です（dBm ではありません）。
-- 5 GHz での受信は、各国の電波法の範囲内（受信のみ）で行ってください。このファームウェアは送信しません。
+- **Update rate**: almost all of the time goes into the serial transfer (the FFT on the PC takes 0.1 ms). Even native USB tops out at 256 kB/s.
+- **Observation is intermittent snapshots**: one capture is 80 MS/s × 8192 samples ≈ 100 µs.
+  Nothing is received between captures, so not every packet shows up (peak hold helps).
+- **Passband**: flat to about ±22 MHz around the center; both edges roll off even at 80 MS/s.
+  80 MHz and 160 MHz channels cannot be seen in full at once (use the sweep).
+- **LO leakage on 5 GHz**: above 5.45 GHz the local oscillator leaks into about ±5 MHz around the LO.
+  The sweep avoids it by stitching only the parts 10–20 MHz away from each LO.
+  In live mode, if the channel you watch overlaps the LO, set **LO offset** to ±12 / ±16 MHz.
+- **Gain while sweeping**: AGC would change the gain at every step and cause steps in the trace, so sweeps
+  always use the manual gain (default 60, measured to show the noise floor without saturating easily).
+- **Levels**: dBFS values are uncalibrated relative levels (not dBm).
+- Receive on 5 GHz only within the radio regulations of your country. This firmware does not transmit.
 
-## プロトコル概要（`espsdr.py`）
+## Protocol overview (`espsdr.py`)
 
-改行で終わる ASCII コマンドを送り、テキストの応答を受け取ります。`CAP16 <n> <rate>` の応答は
-`DATA <n> <crc32> <µs>` のあとに `n×2` バイト（符号付き 8 bit の I, Q の繰り返し）が続き、
-CRC32（zlib 互換）で検証します。レートのインデックスは 0〜5 が 80/40/20/10/8/4 MS/s です。
-詳細は upstream の README と `docs/rx-controls.md` を参照してください。
+Newline-terminated ASCII commands are sent and text replies received. The reply to `CAP16 <n> <rate>` is
+`DATA <n> <crc32> <µs>` followed by `n×2` bytes (signed 8-bit I, Q repeated), verified with
+CRC32 (zlib compatible). Rate indices 0–5 are 80/40/20/10/8/4 MS/s.
+See the upstream README and `docs/rx-controls.md` for details.
 
-## 描画の仕組み（高速化）
+## How drawing is kept fast
 
-- 描画 1 回のあいだに届いた取得はすべてまとめて反映します（平均・ピーク・ウォーターフォールの行）。描画が遅くてもデータを捨てません。
-- 軸・目盛り・チャンネル表示は背景としてキャッシュし、毎フレームは線とウォーターフォール画像だけを描き直します（matplotlib の blit）。
-- 1 秒あたりに観測できる信号量は、転送速度で決まる約 11〜12 万サンプル/秒（80 MS/s の約 0.15%）が上限です。
-  サンプル数を減らすと更新回数は増えますが、1 回の観測時間は短くなります。
+- Every capture received during one frame is folded into the display (average, peak and waterfall rows), so slow drawing never throws data away.
+- Axes, ticks and the channel strip are cached as a background; each frame redraws only the traces and the waterfall image (matplotlib blitting).
+- The signal you can observe per second is limited by the transfer speed to about 110–120 k samples/s (about 0.15% of 80 MS/s).
+  Fewer samples per capture give more updates, but each observation is shorter.
 
-## 謝辞
+## Acknowledgements
 
-このプロジェクトは [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr) を参考にしています。
+This project is based on [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr).
 
-- ESP32-C5 側で動くファームウェアは esp-sdr の公式ビルド済みイメージをそのまま使います（[公式インストーラ](https://espargos.net/espsdr/app/firmware/) から `flash_c5.py` でダウンロード）。
-- `espsdr.py` のシリアルプロトコル（コマンド、`CAP16` の応答形式、レートのインデックスなど）は、esp-sdr の README と `docs/rx-controls.md` をもとに実装しました。
+- The firmware running on the ESP32-C5 is the official prebuilt esp-sdr image, used as is (downloaded by `flash_c5.py` from the [official installer](https://espargos.net/espsdr/app/firmware/)).
+- The serial protocol in `espsdr.py` (commands, `CAP16` reply format, rate indices etc.) was implemented from the esp-sdr README and `docs/rx-controls.md`.
 
-esp-sdr のファームウェアは GPL-3.0 で配布されています。ソースコードは上記のリポジトリから入手できます。
+The esp-sdr firmware is distributed under GPL-3.0. Its source code is available from the repository above.
 
-## ライセンス
+## License
 
-このリポジトリのコードは [GNU General Public License v3.0](LICENSE)（GPL-3.0-or-later）で公開しています。
+The code in this repository is released under the [GNU General Public License v3.0](LICENSE) (GPL-3.0-or-later).
 
-主な依存ライブラリのライセンス（pip でインストールするもので、このリポジトリには含めていません）:
+Licenses of the main dependencies (installed with pip, not included in this repository):
 
-| ライブラリ | ライセンス |
+| Library | License |
 | --- | --- |
 | PySide6 | LGPL-3.0 |
-| PySide6-Fluent-Widgets | GPL-3.0（商用利用には別途ライセンスが必要） |
+| PySide6-Fluent-Widgets | GPL-3.0 (commercial use requires a separate license) |
 | pyqtgraph | MIT |
 | numpy / pyserial | BSD |
-| matplotlib | Matplotlib License（PSF ベース） |
-| esptool | GPL-2.0-or-later（別プロセスとして実行） |
+| matplotlib | Matplotlib License (PSF-based) |
+| esptool | GPL-2.0-or-later (run as a separate process) |

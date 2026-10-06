@@ -5,7 +5,7 @@ PySide6 + PySide6-Fluent-Widgets for the Windows 11 look (navigation pane,
 Mica, cards, toggle switches) and pyqtgraph for fast plotting. The radio side
 (sdr_core.Worker / espsdr.py) is shared with the tkinter version (sdr_app.py).
 
-Run:  python sdr_fluent.py [COMx] [--freq MHz] [--sweep 2.4|5] [--samples N] [--light]
+Run:  python sdr_fluent.py [COMx] [--freq MHz] [--sweep 2.4|5] [--samples N] [--light] [--lang ja|en]
 """
 import argparse
 import os
@@ -26,8 +26,10 @@ from qfluentwidgets import (BodyLabel, CaptionLabel, ComboBox, CompactSpinBox, F
                             ToolTipFilter, TransparentToolButton, isDarkTheme, qconfig,
                             setFontFamilies, setTheme, themeColor)
 
+import i18n
 import wifi_channels as wc
 from espsdr import RATES
+from i18n import bind, tr
 from sdr_core import HERE, SWEEP_STEP_MHZ, WF_ROWS, Worker, channel_activity, default_cfg
 
 pg.setConfigOptions(imageAxisOrder="row-major", antialias=False)
@@ -35,11 +37,12 @@ pg.setConfigOptions(imageAxisOrder="row-major", antialias=False)
 RATE_LABELS = [f"{v // 1_000_000} MS/s" for v in RATES.values()]
 BW_CHOICES = ["最大", "11", "16", "20", "24", "30", "40", "48"]
 LO_CHOICES = ["0", "+12", "-12", "+16", "-16"]
+STAT_CAPTIONS = ("中心周波数", "取得レート", "RMS", "クリップ", "ゲイン")
 CMAPS = ["turbo", "inferno", "viridis", "magma", "plasma"]
 
 
 def tip(widget, text):
-    widget.setToolTip(text)
+    bind(widget.setToolTip, text)
     widget.installEventFilter(ToolTipFilter(widget))
     return widget
 
@@ -52,7 +55,9 @@ class Section(SimpleCardWidget):
         self.v = QVBoxLayout(self)
         self.v.setContentsMargins(14, 10, 14, 12)
         self.v.setSpacing(6)
-        self.v.addWidget(StrongBodyLabel(title))
+        self.title = StrongBodyLabel()
+        bind(self.title.setText, title)
+        self.v.addWidget(self.title)
         self.grid = QGridLayout()
         self.grid.setHorizontalSpacing(10)
         self.grid.setVerticalSpacing(6)
@@ -62,7 +67,9 @@ class Section(SimpleCardWidget):
 
     def row(self, label, widget):
         if label:
-            self.grid.addWidget(BodyLabel(label), self._row, 0)
+            lb = BodyLabel()
+            bind(lb.setText, label)
+            self.grid.addWidget(lb, self._row, 0)
             self.grid.addWidget(widget, self._row, 1)
         else:
             self.grid.addWidget(widget, self._row, 0, 1, 2)
@@ -93,15 +100,23 @@ def captioned(caption, widget):
     v = QVBoxLayout(w)
     v.setContentsMargins(0, 0, 0, 0)
     v.setSpacing(2)
-    v.addWidget(CaptionLabel(caption))
+    c = CaptionLabel()
+    bind(c.setText, caption)
+    v.addWidget(c)
     v.addWidget(widget)
     return w
 
 
+def seg_item(seg, key, text, on_click=None):
+    """SegmentedWidget item whose label follows the UI language."""
+    seg.addItem(key, tr(text), on_click)
+    bind(lambda t: seg.setItemText(key, t), text)
+
+
 def switch(checked=True):
     sw = SwitchButton()
-    sw.setOnText("オン")
-    sw.setOffText("オフ")
+    bind(sw.setOnText, "オン")
+    bind(sw.setOffText, "オフ")
     sw.setChecked(checked)
     return sw
 
@@ -147,6 +162,8 @@ class SdrPage(QWidget):
         self.last_auto = 0.0
         self.shrink_count = 0
         self._sync = False
+        self.conn_state = "idle"
+        self.last_m = self.last_stats_m = None
         self.cmap = pg.colormap.get("turbo", source="matplotlib")
         self._build_ui()
         self._build_plots()
@@ -155,6 +172,7 @@ class SdrPage(QWidget):
         qconfig.themeChanged.connect(self.apply_theme)
         qconfig.themeColorChanged.connect(self.apply_theme)
         self.apply_theme()
+        i18n.on_change(self.retranslate)
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.poll)
         self.timer.start(15)
@@ -179,8 +197,8 @@ class SdrPage(QWidget):
         hdr.addWidget(TitleLabel("Wi-Fi Spectrum"))
         hdr.addSpacing(18)
         self.mode_seg = SegmentedWidget()
-        self.mode_seg.addItem("live", "ライブ", lambda: self.set_mode("live"))
-        self.mode_seg.addItem("sweep", "バンドスイープ", lambda: self.set_mode("sweep"))
+        seg_item(self.mode_seg, "live", "ライブ", lambda: self.set_mode("live"))
+        seg_item(self.mode_seg, "sweep", "バンドスイープ", lambda: self.set_mode("sweep"))
         self.mode_seg.setCurrentItem("live")
         hdr.addWidget(self.mode_seg)
         hdr.addStretch(1)
@@ -189,7 +207,7 @@ class SdrPage(QWidget):
         self.refresh_ports()
         hdr.addWidget(self.port_box)
         hdr.addWidget(tip(self._tool(FluentIcon.SYNC, self.refresh_ports), "ポート一覧を更新"))
-        self.conn_btn = PrimaryPushButton(FluentIcon.CONNECT, "接続")
+        self.conn_btn = PrimaryPushButton(FluentIcon.CONNECT, tr("接続"))
         self.conn_btn.setMinimumWidth(110)
         self.conn_btn.clicked.connect(self.toggle_connect)
         hdr.addWidget(self.conn_btn)
@@ -200,7 +218,7 @@ class SdrPage(QWidget):
 
         stats = QHBoxLayout()
         stats.setSpacing(12)
-        self.stat = [StatCard(c) for c in ("中心周波数", "取得レート", "RMS", "クリップ", "ゲイン")]
+        self.stat = [StatCard(tr(c)) for c in STAT_CAPTIONS]
         for s in self.stat:
             stats.addWidget(s)
         root.addLayout(stats)
@@ -259,7 +277,7 @@ class SdrPage(QWidget):
         self.ns_box.setCurrentText("4096")
         self.fft_box.addItems(["256", "512", "1024", "2048"])
         self.fft_box.setCurrentText("512")
-        self.bw_box.addItems([b if b == "最大" else f"{b} MHz" for b in BW_CHOICES])
+        self.bw_box.addItems([tr(b) if b == "最大" else f"{b} MHz" for b in BW_CHOICES])
         self.lo_box.addItems([f"{x} MHz" for x in LO_CHOICES])
         for cb in (self.rate_box, self.ns_box, self.fft_box, self.bw_box, self.lo_box):
             cb.setMinimumWidth(0)
@@ -290,8 +308,8 @@ class SdrPage(QWidget):
         rb = tip(self._tool(FluentIcon.BROOM, self.reset_display), "ピーク / 滝表示をリセット")
         s.row("ピークホールド", hbox(self.peak_sw, None, rb, stretch=set()))
         self.wf_seg = SegmentedWidget()
-        self.wf_seg.addItem("max", "最大")
-        self.wf_seg.addItem("mean", "平均")
+        seg_item(self.wf_seg, "max", "最大")
+        seg_item(self.wf_seg, "mean", "平均")
         self.wf_seg.setCurrentItem("max")
         s.row("滝表示", self.wf_seg)
         self.ov_sw = switch(True)
@@ -333,9 +351,8 @@ class SdrPage(QWidget):
             p.showGrid(x=True, y=True, alpha=0.12)
             p.getAxis("left").setWidth(52)
         self.p_sp.setLabel("left", "dBFS")
-        self.p_wf.setLabel("left", "履歴")
         self.p_wf.getAxis("left").setTicks([[]])
-        self.p_wf.setLabel("bottom", "周波数 [MHz]")
+        self.label_waterfall()
         self.p_wf.invertY(True)
         self.p_wf.showGrid(x=False, y=False)
         self.c_peak = self.p_sp.plot()
@@ -360,6 +377,26 @@ class SdrPage(QWidget):
             plot.addItem(item, ignoreBounds=True)
         self.on_yrange()
         self.p_sp.scene().sigMouseClicked.connect(self.on_click)
+
+    def label_waterfall(self):
+        self.p_wf.setLabel("left", tr("履歴"))
+        self.p_wf.setLabel("bottom", tr("周波数 [MHz]"))
+
+    def retranslate(self):
+        """Re-label what bind() does not cover: state-dependent and computed texts."""
+        self.port_box.setItemText(0, tr("自動検出"))
+        self.bw_box.setItemText(0, tr("最大"))
+        self.set_connected_ui(self.conn_state)
+        self.label_waterfall()
+        self.label_bottom()
+        if self.last_m is not None:
+            self.update_texts(self.last_m)
+        if self.last_stats_m is not None:
+            self.update_stats(self.last_stats_m)
+        else:
+            for card, c in zip(self.stat, STAT_CAPTIONS):
+                card.cap.setText(tr(c))
+        self.update_marker()
 
     def apply_theme(self, *_):
         dark = isDarkTheme()
@@ -395,27 +432,28 @@ class SdrPage(QWidget):
 
     # ---- connection -------------------------------------------------------
     def refresh_ports(self):
-        cur = self.port_box.currentText() if self.port_box.count() else "自動検出"
+        cur = self.port_box.currentText() if self.port_box.currentIndex() > 0 else None
         self.port_box.clear()
-        items = ["自動検出"] + [p.device for p in serial.tools.list_ports.comports()]
-        self.port_box.addItems(items)
-        self.port_box.setCurrentText(cur if cur in items else "自動検出")
+        ports = [p.device for p in serial.tools.list_ports.comports()]
+        self.port_box.addItems([tr("自動検出")] + ports)
+        self.port_box.setCurrentIndex(ports.index(cur) + 1 if cur in ports else 0)
 
     def toggle_connect(self):
         if self.worker and self.worker.is_alive():
             self.worker.stop_evt.set()
             return
-        port = self.port_box.currentText()
+        port = self.port_box.currentText() if self.port_box.currentIndex() > 0 else None
         self.reset_display()
-        self.worker = Worker(None if port == "自動検出" else port, self.cfg, self.q)
+        self.worker = Worker(port, self.cfg, self.q)
         self.worker.start()
-        self.conn_btn.setText("接続中…")
-        self.conn_btn.setEnabled(False)
+        self.set_connected_ui("connecting")
 
-    def set_connected_ui(self, on):
-        self.conn_btn.setEnabled(True)
-        self.conn_btn.setText("切断" if on else "接続")
-        self.conn_btn.setIcon(FluentIcon.CLOSE if on else FluentIcon.CONNECT)
+    def set_connected_ui(self, state):
+        """state: "idle", "connecting" or "on"."""
+        self.conn_state = state
+        self.conn_btn.setEnabled(state != "connecting")
+        self.conn_btn.setText(tr({"idle": "接続", "connecting": "接続中…", "on": "切断"}[state]))
+        self.conn_btn.setIcon(FluentIcon.CLOSE if state == "on" else FluentIcon.CONNECT)
 
     def toggle_pause(self):
         p = not self.get_cfg("paused")
@@ -424,7 +462,7 @@ class SdrPage(QWidget):
 
     def record(self):
         if self.get_cfg("mode") != "live":
-            InfoBar.warning("I/Q 保存", "ライブモードで使えます", duration=2500, parent=self.window())
+            InfoBar.warning(tr("I/Q 保存"), tr("ライブモードで使えます"), duration=2500, parent=self.window())
             return
         self.set_cfg(record=True)
 
@@ -599,11 +637,12 @@ class SdrPage(QWidget):
         a, pk = float(self.avg[i]), float(self.peak[i])
         band = wc.band_of(mf)
         c, fc = min(wc.channels_20(band), key=lambda cf: abs(cf[1] - mf))
-        ch = f"ch{c} ({band})" if abs(fc - mf) <= 10 else f"Wi-Fi チャンネル外 ({band})"
+        ch = f"ch{c} ({band})" if abs(fc - mf) <= 10 else f"{tr('Wi-Fi チャンネル外')} ({band})"
 
         def db(v):
             return "—" if not np.isfinite(v) else f"{v:6.1f} dBFS"
-        self.mk_text.setText(f"{f[i]:.2f} MHz   {ch}\n平均レベル  {db(a)}\nピーク      {db(pk)}")
+        self.mk_text.setText(tr("{freq} MHz   {ch}\n平均レベル  {avg}\nピーク      {peak}").format(
+            freq=f"{f[i]:.2f}", ch=ch, avg=db(a), peak=db(pk)))
         (xlo, xhi), (ylo, yhi) = self.p_sp.viewRange()
         right = mf > xlo + 0.7 * (xhi - xlo)
         self.mk_text.setAnchor((1, 0) if right else (0, 0))
@@ -631,14 +670,19 @@ class SdrPage(QWidget):
         if live:
             self.p_bt.setXLink(None)
             ax.setTicks(None)
-            self.p_bt.setLabel("bottom", "時間 [µs]　1 回の取得内の受信電力（Wi-Fi パケットのバースト）")
-            self.p_bt.setLabel("left", "dBFS")
             self.p_bt.setYRange(-70, 0, padding=0)
         else:
             # bars sit at each channel's centre frequency, sharing the spectrum's x axis
             self.p_bt.setXLink(self.p_sp)
-            self.p_bt.setLabel("bottom", "チャンネル（中心周波数の位置）　棒: ピーク − ノイズフロア / 数字: 検出率 %")
-            self.p_bt.setLabel("left", "活動 [dB]")
+        self.label_bottom()
+
+    def label_bottom(self):
+        if self.get_cfg("mode") == "live":
+            self.p_bt.setLabel("bottom", tr("時間 [µs]　1 回の取得内の受信電力（Wi-Fi パケットのバースト）"))
+            self.p_bt.setLabel("left", "dBFS")
+        else:
+            self.p_bt.setLabel("bottom", tr("チャンネル（中心周波数の位置）　棒: ピーク − ノイズフロア / 数字: 検出率 %"))
+            self.p_bt.setLabel("left", tr("活動 [dB]"))
 
     def update_overlay(self, fmin, fmax, center=None):
         ylo, yhi = self.p_sp.viewRange()[1]
@@ -731,20 +775,20 @@ class SdrPage(QWidget):
                 elif k == "log":
                     self.device_page.log(m["msg"])
                 elif k == "error":
-                    self.device_page.log("エラー: " + m["msg"])
+                    self.device_page.log(tr("エラー: {}").format(m["msg"]))
                     if m["fatal"]:
-                        InfoBar.error("接続エラー", m["msg"], duration=5000, parent=self.window())
-                        self.set_connected_ui(False)
+                        InfoBar.error(tr("接続エラー"), m["msg"], duration=5000, parent=self.window())
+                        self.set_connected_ui("idle")
                 elif k == "connected":
-                    self.set_connected_ui(True)
+                    self.set_connected_ui("on")
                     self.device_page.set_connected(m)
                     lim = m["limits"]
                     if lim.get("gain"):
                         self.gain_sl.setMaximum(lim["gain"][1])
-                    InfoBar.success("接続しました", f"{m['port']}   {m['info']}", duration=2500,
+                    InfoBar.success(tr("接続しました"), f"{m['port']}   {m['info']}", duration=2500,
                                     parent=self.window())
                 elif k == "disconnected":
-                    self.set_connected_ui(False)
+                    self.set_connected_ui("idle")
                     self.device_page.set_disconnected()
         except queue.Empty:
             pass
@@ -797,26 +841,13 @@ class SdrPage(QWidget):
             self.c_env.setData(m["t_us"], m["env"])
             if len(m["t_us"]):
                 self.p_bt.setXRange(0, m["t_us"][-1], padding=0)
-            gain = self.get_cfg("gain")
-            lo_txt = f"　LO {m['lo']} MHz" if m["lo"] != m["freq"] else ""
-            self.plot_title.setText(f"ライブ　{m['fs'] / 1e6:g} MS/s × {m['n']} サンプル "
-                                    f"({m['n'] / m['fs'] * 1e6:.0f} µs / 回){lo_txt}")
-            self.stat[0].set(f"中心周波数　{wc.band_of(m['freq'])}", f"{m['freq']} MHz")
-            self.stat[1].set("取得レート", f"{len(self.cap_t) / 2:.1f} 回/秒")
-            self.stat[2].set("RMS", f"{m['rms_db']:.1f} dBFS")
-            self.stat[3].set("クリップ", f"{m['clip']:.2f} %")
-            self.stat[4].set("ゲイン", "AGC" if gain is None else f"手動 {gain}")
         else:
             self.update_overlay(f[0], f[-1], None)
-            self.plot_title.setText(f"バンドスイープ　{m['band']}　{f[0]:.0f}–{f[-1]:.0f} MHz　"
-                                    f"ステップ {m['step']}/{m['steps']}")
             if m["done"]:
                 self.draw_occupancy(m)
-                self.stat[0].set("バンド", m["band"])
-                self.stat[1].set("1 スイープ", f"{m['sweep_s']:.2f} 秒")
-                self.stat[2].set("ステップ", f"{m['steps']} × {SWEEP_STEP_MHZ} MHz")
-                self.stat[3].set("スイープ回数", f"{self.occ_sweeps}")
-                self.stat[4].set("ゲイン", f"手動 {self.get_cfg('manual_gain')}")
+        self.update_texts(m)
+        if m["kind"] == "live" or m["done"]:
+            self.update_stats(m)
         if self.auto_frames and (m["kind"] == "live" or m["done"]):
             self.auto_frames = max(0, self.auto_frames - len(msgs))
             if self.auto_frames == 0:
@@ -827,6 +858,33 @@ class SdrPage(QWidget):
             self.last_auto = now
         self.f_cur = f
         self.update_marker()
+
+    def update_texts(self, m):
+        self.last_m = m
+        if m["kind"] == "live":
+            lo_txt = tr("　LO {} MHz").format(m["lo"]) if m["lo"] != m["freq"] else ""
+            self.plot_title.setText(tr("ライブ　{rate} MS/s × {n} サンプル ({us} µs / 回){lo}").format(
+                rate=f"{m['fs'] / 1e6:g}", n=m["n"], us=f"{m['n'] / m['fs'] * 1e6:.0f}", lo=lo_txt))
+        else:
+            f = m["f"]
+            self.plot_title.setText(tr("バンドスイープ　{band}　{f0}–{f1} MHz　ステップ {step}/{steps}").format(
+                band=m["band"], f0=f"{f[0]:.0f}", f1=f"{f[-1]:.0f}", step=m["step"], steps=m["steps"]))
+
+    def update_stats(self, m):
+        self.last_stats_m = m
+        if m["kind"] == "live":
+            gain = self.get_cfg("gain")
+            self.stat[0].set(tr("中心周波数　{}").format(wc.band_of(m["freq"])), f"{m['freq']} MHz")
+            self.stat[1].set(tr("取得レート"), tr("{:.1f} 回/秒").format(len(self.cap_t) / 2))
+            self.stat[2].set("RMS", f"{m['rms_db']:.1f} dBFS")
+            self.stat[3].set(tr("クリップ"), f"{m['clip']:.2f} %")
+            self.stat[4].set(tr("ゲイン"), "AGC" if gain is None else tr("手動 {}").format(gain))
+        else:
+            self.stat[0].set(tr("バンド"), m["band"])
+            self.stat[1].set(tr("1 スイープ"), tr("{:.2f} 秒").format(m["sweep_s"]))
+            self.stat[2].set(tr("ステップ"), f"{m['steps']} × {SWEEP_STEP_MHZ} MHz")
+            self.stat[3].set(tr("スイープ回数"), f"{self.occ_sweeps}")
+            self.stat[4].set(tr("ゲイン"), tr("手動 {}").format(self.get_cfg("manual_gain")))
 
 
 # --------------------------------------------------------------------------
@@ -839,12 +897,16 @@ class DevicePage(QWidget):
         v = QVBoxLayout(self)
         v.setContentsMargins(28, 14, 28, 20)
         v.setSpacing(12)
-        v.addWidget(TitleLabel("デバイス"))
-        s = Section("接続")
+        title = TitleLabel()
+        bind(title.setText, "デバイス")
+        v.addWidget(title)
+        s = Section("接続情報")
         self.lbl = {}
         for k in ("状態", "ポート", "ファームウェア", "最大サンプル数", "ゲイン範囲", "アナログ帯域", "サンプルレート"):
             self.lbl[k] = s.row(k, BodyLabel("—"))
-        self.lbl["状態"].setText("未接続")
+        self.state = "未接続"
+        i18n.on_change(lambda: self.lbl["状態"].setText(tr(self.state)))
+        self.lbl["状態"].setText(tr(self.state))
         v.addWidget(s)
         s = Section("ログ")
         self.text = PlainTextEdit()
@@ -853,7 +915,8 @@ class DevicePage(QWidget):
         s.row("", self.text)
         v.addWidget(s, 1)
         h = QHBoxLayout()
-        b = PushButton(FluentIcon.FOLDER, "I/Q 保存フォルダを開く")
+        b = PushButton(FluentIcon.FOLDER, "")
+        bind(b.setText, "I/Q 保存フォルダを開く")
         b.clicked.connect(self.open_recordings)
         h.addWidget(b)
         h.addStretch(1)
@@ -864,7 +927,8 @@ class DevicePage(QWidget):
 
     def set_connected(self, m):
         lim = m["limits"]
-        self.lbl["状態"].setText("接続中")
+        self.state = "接続中"
+        self.lbl["状態"].setText(tr(self.state))
         self.lbl["ポート"].setText(m["port"])
         self.lbl["ファームウェア"].setText(m["info"])
         self.lbl["最大サンプル数"].setText(str(m["max_samples"]))
@@ -874,11 +938,12 @@ class DevicePage(QWidget):
             self.lbl["アナログ帯域"].setText(f"{lim['bandwidth'][0]} – {lim['bandwidth'][1]} MHz")
         if lim.get("rates"):
             self.lbl["サンプルレート"].setText(" / ".join(f"{r // 1_000_000}" for r in lim["rates"]) + " MS/s")
-        self.log(f"接続: {m['port']}  {m['info']}")
+        self.log(tr("接続: {port}  {info}").format(port=m["port"], info=m["info"]))
 
     def set_disconnected(self):
-        self.lbl["状態"].setText("未接続")
-        self.log("切断しました")
+        self.state = "未接続"
+        self.lbl["状態"].setText(tr(self.state))
+        self.log(tr("切断しました"))
 
     def open_recordings(self):
         d = os.path.join(HERE, "recordings")
@@ -893,12 +958,19 @@ class SettingsPage(QWidget):
         v = QVBoxLayout(self)
         v.setContentsMargins(28, 14, 28, 20)
         v.setSpacing(12)
-        v.addWidget(TitleLabel("設定"))
+        title = TitleLabel()
+        bind(title.setText, "設定")
+        v.addWidget(title)
         s = Section("外観")
+        self.lang_seg = SegmentedWidget()
+        for key, name in i18n.LANGS.items():
+            self.lang_seg.addItem(key, name, lambda key=key: i18n.set_lang(key))
+        self.lang_seg.setCurrentItem(i18n.lang())
+        s.row("言語", self.lang_seg)
         self.theme_seg = SegmentedWidget()
         for key, text, th in (("light", "ライト", Theme.LIGHT), ("dark", "ダーク", Theme.DARK),
                               ("auto", "システム", Theme.AUTO)):
-            self.theme_seg.addItem(key, text, lambda th=th: setTheme(th))
+            seg_item(self.theme_seg, key, text, lambda th=th: setTheme(th))
         self.theme_seg.setCurrentItem("dark" if isDarkTheme() else "light")
         s.row("テーマ", self.theme_seg)
         cm = ComboBox()
@@ -907,10 +979,11 @@ class SettingsPage(QWidget):
         s.row("滝表示の配色", cm)
         v.addWidget(s)
         s = Section("このアプリについて")
-        about = BodyLabel(
-            "ESP32-C5 の内蔵 Wi-Fi 6 デュアルバンド無線を SDR として使い、2.4 GHz / 5 GHz 帯を表示します。\n"
-            "ファームウェア: ESPARGOS ESP-SDR (GPL-3.0)  https://github.com/ESPARGOS/esp-sdr\n"
-            "dBFS は未校正の相対値です。受信のみで、送信は行いません。")
+        about = BodyLabel()
+        bind(about.setText,
+             "ESP32-C5 の内蔵 Wi-Fi 6 デュアルバンド無線を SDR として使い、2.4 GHz / 5 GHz 帯を表示します。\n"
+             "ファームウェア: ESPARGOS ESP-SDR (GPL-3.0)  https://github.com/ESPARGOS/esp-sdr\n"
+             "dBFS は未校正の相対値です。受信のみで、送信は行いません。")
         about.setWordWrap(True)
         s.row("", about)
         v.addWidget(s)
@@ -926,9 +999,12 @@ class MainWindow(FluentWindow):
         self.device = DevicePage(self)
         self.sdr = SdrPage(self.device, self)
         self.settings = SettingsPage(self.sdr, self)
-        self.addSubInterface(self.sdr, FluentIcon.WIFI, "スペクトラム")
-        self.addSubInterface(self.device, FluentIcon.IOT, "デバイス")
-        self.addSubInterface(self.settings, FluentIcon.SETTING, "設定", NavigationItemPosition.BOTTOM)
+        for page, icon, text, pos in ((self.sdr, FluentIcon.WIFI, "スペクトラム", NavigationItemPosition.TOP),
+                                      (self.device, FluentIcon.IOT, "デバイス", NavigationItemPosition.TOP),
+                                      (self.settings, FluentIcon.SETTING, "設定", NavigationItemPosition.BOTTOM)):
+            item = self.addSubInterface(page, icon, tr(text), pos)
+            bind(item.setText, text)
+            bind(item.setToolTip, text)
         self.navigationInterface.setExpandWidth(200)
 
     def closeEvent(self, e):
@@ -943,7 +1019,9 @@ def main():
     ap.add_argument("--sweep", choices=["2.4", "5"], help="start in band-sweep mode")
     ap.add_argument("--samples", choices=["2048", "4096", "8192", "16380"], help="samples per capture")
     ap.add_argument("--light", action="store_true", help="light theme")
+    ap.add_argument("--lang", choices=list(i18n.LANGS), help="UI language (default: last used, else the OS language)")
     args = ap.parse_args()
+    i18n.set_lang(args.lang or i18n.load_lang(), save=bool(args.lang))
 
     app = QApplication(sys.argv)
     setFontFamilies(["Segoe UI", "Yu Gothic UI", "Meiryo UI"])

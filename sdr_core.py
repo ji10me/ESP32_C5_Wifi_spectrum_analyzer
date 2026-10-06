@@ -16,6 +16,7 @@ import serial
 
 import wifi_channels as wc
 from espsdr import RATES, EspSdr, SdrError, find_device
+from i18n import tr
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 WF_ROWS = 200
@@ -79,7 +80,7 @@ class Worker(threading.Thread):
         try:
             port = self.port or find_device(log=lambda m: self.emit({"kind": "log", "msg": m}, False))
             if not port:
-                raise SdrError("ESP-SDR を実行中のデバイスが見つかりません")
+                raise SdrError(tr("ESP-SDR を実行中のデバイスが見つかりません"))
             dev = EspSdr(port)
         except (SdrError, serial.SerialException, OSError) as e:
             self.emit({"kind": "error", "msg": str(e), "fatal": True}, False)
@@ -119,7 +120,7 @@ class Worker(threading.Thread):
                     dev.resync()
                     self.applied.clear()
         except (SdrError, serial.SerialException, OSError) as e:
-            self.emit({"kind": "error", "msg": f"切断: {e}", "fatal": True}, False)
+            self.emit({"kind": "error", "msg": tr("切断: {}").format(e), "fatal": True}, False)
         finally:
             dev.close()
             self.emit({"kind": "disconnected"}, False)
@@ -159,7 +160,7 @@ class Worker(threading.Thread):
                        "gain": "AGC" if c["gain"] is None else c["gain"], "bandwidth_mhz": c["bw"],
                        "format": "complex64, full scale 1.0", "time": time.strftime("%Y-%m-%d %H:%M:%S")},
                       fp, indent=1)
-        self.emit({"kind": "log", "msg": f"保存: {stem}.npy / .cfile"}, False)
+        self.emit({"kind": "log", "msg": tr("保存: {}.npy / .cfile").format(stem)}, False)
 
     # ---- sweep -------------------------------------------------------
     def new_sweep(self, c, key):
