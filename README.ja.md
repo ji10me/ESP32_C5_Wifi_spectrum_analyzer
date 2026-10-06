@@ -42,7 +42,7 @@ ESP32-C5 の内蔵 Wi-Fi 6 デュアルバンド無線を SDR として使い、
 - 右のパネルで中心周波数・チャンネル・ゲインなどを変えます
 - グラフを **クリック** するとマーカーを置き、**ダブルクリック** するとその周波数に同調し、**右クリック** するとマーカーを消します
 - 「I/Q 保存」で受信データを `recordings/` に保存します
-- 左下の **設定** → 「言語」で日本語と英語をその場で切り替えられます（選んだ言語は次回も使われます）
+- 左下の **設定** → 「言語」で日本語と英語をその場で切り替えられます（初回は英語で起動します。選んだ言語は次回も使われます）
 
 うまくいかないとき: 「ESP-SDR を実行中のデバイスが見つかりません」と出たら、手順 3 の書き込みが済んでいるか、
 ポートを `python sdr_fluent.py COM7` のように指定して試してください。
@@ -79,7 +79,7 @@ pip install -r requirements.txt     # 初回のみ
 python flash_c5.py COM6             # 初回のみ: ファームウェアをダウンロードして書き込み
 python sdr_fluent.py                # 起動（ポートは自動検出）。run_sdr.bat でも可
 python sdr_fluent.py --light        # ライトテーマで起動
-python sdr_fluent.py --lang en      # 英語で起動（ja / en。指定しなければ前回の言語、初回は OS の言語）
+python sdr_fluent.py --lang ja      # 日本語で起動（en / ja。指定しなければ前回の言語、初回は英語）
 python sdr_app.py                   # 旧 GUI（tkinter）
 python sdr_app.py COM7 --freq 5180  # ポートと周波数を指定
 python sdr_app.py COM7 --sweep 5    # 5 GHz 帯スイープで起動（--sweep 2.4 も可）
