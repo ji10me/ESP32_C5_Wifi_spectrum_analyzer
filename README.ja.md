@@ -1,6 +1,6 @@
 # ESP32-C5 Wi-Fi SDR（2.4 GHz / 5 GHz）
 
-[English](README.md) | **日本語**
+[简体中文](README.md) | [English](README.en.md) | **日本語**
 
 ESP32-C5 の内蔵 Wi-Fi 6 デュアルバンド無線を SDR として使い、2.4 GHz 帯と 5 GHz 帯の
 スペクトラム・ウォーターフォール・パケットのバーストを PC 上で表示するアプリです。
