@@ -1,173 +1,174 @@
-# ESP32-C5 Wi-Fi SDR（2.4 GHz / 5 GHz）
+# ESP32-C5 Wi-Fi SDR (2.4 GHz / 5 GHz)
 
-**简体中文** | [English](README.en.md) | [日本語](README.ja.md)
+**English** | [日本語](README.ja.md) | [简体中文](README.zh.md)
 
-把 ESP32-C5 内置的 Wi-Fi 6 双频无线电当作 SDR 使用，在电脑上显示 2.4 GHz / 5 GHz 频段的频谱、瀑布图和数据包突发。
+A PC app that uses the built-in Wi-Fi 6 dual-band radio of the ESP32-C5 as an SDR and shows the
+spectrum, waterfall and packet bursts of the 2.4 GHz and 5 GHz bands.
 
-- 固件：[ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr) 官方预编译镜像（GPL-3.0）
-- 上位机：Python（PySide6 + PySide6-Fluent-Widgets + pyqtgraph；经典版用 tkinter + matplotlib），即本仓库的代码
-- 协议与实现参考 [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr)（见[致谢](#致谢)）
-- 界面可在日语 / 英语之间实时切换（本文档另提供简体中文版）
+- Firmware: the official prebuilt images of [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr) (GPL-3.0)
+- PC app: Python (PySide6 + PySide6-Fluent-Widgets + pyqtgraph; the classic version uses tkinter + matplotlib) — the code in this repository
+- The protocol and implementation are based on [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr) (see [Acknowledgements](#acknowledgements))
+- The UI can be switched between English and Japanese at run time
 
-## 截图
+## Screenshots
 
-**实时模式（2.4 GHz，ch6）**：频谱（峰值保持与平均）、瀑布图，以及单次采集内接收功率随时间的变化
+**Live mode (2.4 GHz, ch6)**: spectrum (peak hold and average), waterfall, and received power over time within one capture
 
-![实时模式 2.4 GHz](docs/screenshot_live_2.4ghz.png)
+![Live mode 2.4 GHz](docs/screenshot_live_2.4ghz.png)
 
-**频段扫描（5 GHz，5150–5895 MHz）**：整段频谱，以及每个 20 MHz 信道的活动度与检出率
+**Band sweep (5 GHz, 5150–5895 MHz)**: spectrum of the whole band, and activity and detection rate per 20 MHz channel
 
-![频段扫描 5 GHz](docs/screenshot_sweep_5ghz.png)
+![Band sweep 5 GHz](docs/screenshot_sweep_5ghz.png)
 
-（截图为日语界面。）
+(The screenshots show the Japanese UI.)
 
-## 快速开始
+## Quick start
 
-**你需要**：一块 ESP32-C5 开发板（Flash ≥ 2 MB）、一根 USB 线，以及一台装有 Python 3.10 或更高版本的电脑（在 Windows 上测试过）
+**You need**: an ESP32-C5 development board (2 MB flash or more), a USB cable, and a PC with Python 3.10 or later (tested on Windows)
 
-1. **安装依赖**（仅首次）
+1. **Install the libraries** (first time only)
    ```powershell
    pip install -r requirements.txt
    ```
-2. **连接开发板**：把板子上的 “USB” 口（原生 USB）接到电脑，查一下它的 COM 端口号（例如在设备管理器里）。
-   **COM 端口号因电脑而异**（换个 USB 口也可能变）。本文里的 `COM6` / `COM7` 只是示例，请以你电脑上显示的为准。
-3. **烧写固件**（仅首次）：官方镜像会自动下载，校验 SHA-256 后写入。
+2. **Connect the board**: plug the board's "USB" port (native USB) into the PC and look up its COM port (e.g. in Device Manager).
+   **The COM port number differs from PC to PC** (and can change with the USB socket you use). `COM6` / `COM7` in this README are only examples; use the number shown on your PC.
+3. **Flash the firmware** (first time only): the official images are downloaded automatically, checked against their SHA-256 and written.
    ```powershell
-   python flash_c5.py COM7      # 把 COM7 换成你的端口
+   python flash_c5.py COM7      # replace COM7 with your port
    ```
-4. **启动程序**：端口会自动识别，也可以直接双击 `run_sdr.bat`。
+4. **Start the app**: the port is detected automatically. You can also double-click `run_sdr.bat`.
    ```powershell
    python sdr_fluent.py
    ```
 
-**基本操作**
-- 顶部 **实时** 只看一个频率；**频段扫描** 看整个 2.4 GHz 或 5 GHz 频段
-- 在右侧面板修改中心频率、信道、增益等
-- 在图上 **单击** 放置标记，**双击** 调谐到该频率，**右键** 清除标记
-- **保存 I/Q** 把接收数据存到 `recordings/`
-- 左下 **设置** → **语言** 可在日语 / 英语之间即时切换，选择会被记住
+**Basic operation**
+- **Live** at the top shows one frequency; **Band sweep** shows the whole 2.4 GHz or 5 GHz band
+- Change the center frequency, channel, gain and so on in the right-hand panel
+- **Click** a graph to place a marker, **double-click** to tune to that frequency, **right-click** to remove the marker
+- **Save I/Q** stores the received data in `recordings/`
+- **Settings** (bottom left) → **Language** switches between English and Japanese instantly; the choice is remembered
 
-跑不起来时：如果提示 “No device running the ESP-SDR firmware was found”，先确认第 3 步已完成，
-或者显式给出端口，例如 `python sdr_fluent.py COM7`。
+If it does not work: if you see "No device running the ESP-SDR firmware was found", check that step 3 completed,
+or give the port explicitly, e.g. `python sdr_fluent.py COM7`.
 
-## 文件说明
+## Files
 
-| 文件 | 内容 |
+| File | Contents |
 | --- | --- |
-| `sdr_fluent.py` | **图形界面（WinUI 3 / Fluent Design 风格）**。PySide6 + PySide6-Fluent-Widgets + pyqtgraph |
-| `sdr_app.py` | 经典界面（tkinter + matplotlib）。不装 Qt 库也能运行 |
-| `sdr_core.py` | 接收线程与信号处理（两个界面共用） |
-| `espsdr.py` | ESP-SDR 串口协议驱动（`INFO` / `FREQ` / `GAIN` / `BANDWIDTH` / `CAP16` 等） |
-| `i18n.py` | 界面语言（日语 / 英语）：翻译表与运行时切换（两个界面共用） |
-| `wifi_channels.py` | 2.4 / 5 GHz Wi-Fi 信道表（20/40/80/160 MHz，U-NII-1 ~ 4） |
-| `flash_c5.py` | 把固件写入 ESP32-C5（带 SHA-256 校验） |
-| `run_sdr.bat` / `run_sdr_classic.bat` | Fluent 版 / 经典版的启动脚本 |
-| `firmware/` | 固件镜像（由 `flash_c5.py` 从官网下载；不在仓库中） |
-| `recordings/` | 通过 **保存 I/Q** 存下的 I/Q 数据（不在仓库中） |
+| `sdr_fluent.py` | **GUI app (WinUI 3 / Fluent Design style)**. PySide6 + PySide6-Fluent-Widgets + pyqtgraph |
+| `sdr_app.py` | Classic GUI (tkinter + matplotlib). Runs without the Qt libraries |
+| `sdr_core.py` | Receive thread and signal processing (shared by both GUIs) |
+| `espsdr.py` | Driver for the ESP-SDR serial protocol (`INFO` / `FREQ` / `GAIN` / `BANDWIDTH` / `CAP16` etc.) |
+| `i18n.py` | UI language (Japanese / English): translation table and run-time switching (shared by both GUIs) |
+| `wifi_channels.py` | 2.4 / 5 GHz Wi-Fi channel tables (20/40/80/160 MHz, U-NII-1 to 4) |
+| `flash_c5.py` | Flashes the firmware onto the ESP32-C5 (with SHA-256 check) |
+| `run_sdr.bat` / `run_sdr_classic.bat` | Launchers for the Fluent / classic version |
+| `firmware/` | Firmware images (downloaded from the official site by `flash_c5.py`; not in the repository) |
+| `recordings/` | I/Q data saved with **Save I/Q** (not in the repository) |
 
-### Fluent 界面
+### Fluent UI
 
-- 左侧导航：**频谱** / **设备**（连接信息、日志、录制文件夹）/ **设置**（语言、浅色 / 深色 / 跟随系统主题、瀑布图配色）
-- 顶部：实时 / 频段扫描切换、端口选择、连接、暂停、保存 I/Q
-- 统计卡：中心频率、采集速率、RMS、削顶、增益（扫描模式下为：频段、单次扫描耗时、扫描次数）
-- 右侧面板：频率 / 接收 / 增益 / 显示设置
-- 横向拖动图形可平移，滚轮缩放
-- **单击**：放置标记，显示该频率、信道、平均电平与峰值（dBFS），并实时更新；拖动可移动
-- **双击**：调谐到该频率（同时重置平均与峰值）/ **右键**：清除标记
+- Left navigation: **Spectrum** / **Device** (connection info, log, recordings folder) / **Settings** (language, light / dark / system theme, waterfall colors)
+- Top: live / band sweep switch, port selection, connect, pause, save I/Q
+- Stat cards: center frequency, capture rate, RMS, clipping, gain (in sweep mode: band, sweep time, sweep count)
+- Right panel: frequency / receiver / gain / display settings
+- Drag a graph horizontally to pan, use the wheel to zoom
+- **Click**: place a marker showing frequency, channel, mean level and peak (dBFS), updated live; drag to move it
+- **Double-click**: tune to that frequency (resets average and peak) / **Right-click**: remove the marker
 
-## 用法（命令行参数）
+## Usage (command details)
 
-把下面的 `COM6` / `COM7` 换成你自己的 COM 端口（端口号因电脑而异）。
+Replace `COM6` / `COM7` below with your own COM port (the number differs from PC to PC).
 
 ```powershell
-pip install -r requirements.txt     # 仅首次
-python flash_c5.py COM6             # 仅首次：下载并烧写固件
-python sdr_fluent.py                # 启动（端口自动识别）；run_sdr.bat 等价
-python sdr_fluent.py --light        # 以浅色主题启动
-python sdr_fluent.py --lang en      # 以英语启动（ja / en；默认沿用上次选择，首次跟随系统语言）
-python sdr_app.py                   # 经典界面（tkinter）
-python sdr_app.py COM7 --freq 5180  # 指定端口与频率
-python sdr_app.py COM7 --sweep 5    # 启动即做 5 GHz 频段扫描（--sweep 2.4 亦可）
-python sdr_app.py --samples 2048    # 单次采集的采样点数（默认 4096）
-# --freq / --sweep / --samples / --lang 对两个界面都适用
+pip install -r requirements.txt     # first time only
+python flash_c5.py COM6             # first time only: download and flash the firmware
+python sdr_fluent.py                # start (port auto-detected); run_sdr.bat does the same
+python sdr_fluent.py --light        # start with the light theme
+python sdr_fluent.py --lang en      # start in English (ja / en; default: last used, first run: OS language)
+python sdr_app.py                   # classic GUI (tkinter)
+python sdr_app.py COM7 --freq 5180  # set port and frequency
+python sdr_app.py COM7 --sweep 5    # start in 5 GHz band sweep (--sweep 2.4 also works)
+python sdr_app.py --samples 2048    # samples per capture (default 4096)
+# --freq / --sweep / --samples / --lang work with both GUIs
 ```
 
-建议通过板子上的 **“USB” 口（原生 USB Serial/JTAG）** 连接。
-“UART” 口（CH343，2 Mbaud）也能用，但传输速度大约只有一半。
+Connecting through the board's **"USB" port (native USB Serial/JTAG)** is recommended.
+The "UART" port (CH343, 2 Mbaud) also works, at about half the transfer speed.
 
-| 连接方式 | 有效吞吐 | 刷新率（8192 采样点） |
+| Connection | Effective throughput | Update rate (8192 samples) |
 | --- | --- | --- |
-| 原生 USB | 256 kB/s | 约 15 次/秒（4096：28 次/秒，2048：52 次/秒） |
-| UART / CH343 | 133 kB/s | 约 8 次/秒 |
+| Native USB | 256 kB/s | ~15 /s (4096: 28 /s, 2048: 52 /s) |
+| UART / CH343 | 133 kB/s | ~8 /s |
 
-原生 USB 需要上位机拉高 DTR 之后才开始发数据，所以 `espsdr.py` 只对 Espressif 的 USB（VID 0x303A）拉 DTR；
-RTS 始终保持无效电平，因此不会复位开发板。
+Native USB only sends data once the PC asserts DTR, so `espsdr.py` asserts DTR only for Espressif USB
+(VID 0x303A). RTS stays deasserted, so the board is not reset.
 
-## 功能
+## Features
 
-**实时模式**（中心频率固定）
-- 频谱（平均与峰值保持）、瀑布图
-- 单次采集内接收功率随时间的变化（能看到 Wi-Fi 数据包突发）
-- Wi-Fi 信道条与所选信道宽度的标注（20/40/80/160 MHz）
-- 在频谱或瀑布图上单击放置电平标记，双击调谐到该处（经典界面单击即调谐）
-- 采样率 80/40/20/10/8/4 MS/s，FFT 256–2048，模拟带宽 11–48 MHz
-- AGC 与手动增益（0–83）、DC 去除、LO 偏移
-- I/Q 录制（`.npy`；GNU Radio / inspectrum 可读的 `.cfile`；以及 `.json` 元数据）
+**Live mode** (fixed center frequency)
+- Spectrum (average and peak hold), waterfall
+- Received power over time within one capture (Wi-Fi packet bursts are visible)
+- Wi-Fi channel strip and a highlight of the selected channel width (20/40/80/160 MHz)
+- Click the spectrum or waterfall for a level marker, double-click to tune there (the classic GUI tunes on click)
+- Sample rates 80/40/20/10/8/4 MS/s, FFT 256–2048, analog bandwidth 11–48 MHz
+- AGC and manual gain (0–83), DC removal, LO offset
+- I/Q recording (`.npy`, `.cfile` readable by GNU Radio / inspectrum, and `.json` metadata)
 
-**频段扫描模式**（整段）
-- 2.4 GHz（2400–2500 MHz）：7 步，单次扫描约 0.5 s
-- 5 GHz（5150–5895 MHz，ch36–177）：39 步，单次扫描约 1.6 s（USB + 4096 采样点；走 UART 约 2.7 s）
-- 每个 20 MHz 信道的活动度（峰值 − 噪声底）与检出率 %
+**Band sweep mode** (whole band)
+- 2.4 GHz (2400–2500 MHz): 7 steps, ~0.5 s per sweep
+- 5 GHz (5150–5895 MHz, ch36–177): 39 steps, ~1.6 s per sweep (USB, 4096 samples; ~2.7 s over UART)
+- Activity per 20 MHz channel (peak − noise floor) and detection rate %
 
-## 实测特性与注意事项
+## Measured behavior and caveats
 
-- **刷新率**：时间几乎都花在串口传输上（PC 端 FFT 只要 0.1 ms）。即使原生 USB 也只有 256 kB/s。
-- **观测是断续的快照**：一次采集是 80 MS/s × 8192 采样点 ≈ 100 µs。
-  两次采集之间什么也收不到，所以并非每个数据包都能看到（峰值保持有帮助）。
-- **通带**：中心 ±22 MHz 左右平坦；即使在 80 MS/s 下两侧也会滚降。
-  80 MHz 与 160 MHz 信道无法一次看全（请用扫描模式）。
-- **5 GHz 的 LO 泄漏**：5.45 GHz 以上，本振会泄漏到 LO 附近约 ±5 MHz。
-  扫描模式只拼接距 LO 10–20 MHz 之外的部分来避开它。
-  实时模式下若观察的信道与 LO 重叠，把 **LO 偏移** 设为 ±12 / ±16 MHz。
-- **扫描时的增益**：AGC 会在每一步改变增益，导致谱线出现台阶，所以扫描始终使用手动增益
-  （默认 60，实测既不轻易饱和又能看到噪声底）。
-- **电平**：dBFS 是未校准的相对值（不是 dBm）。
-- 5 GHz 的接收请遵守所在国家的无线电法规。本固件不发射。
+- **Update rate**: almost all of the time goes into the serial transfer (the FFT on the PC takes 0.1 ms). Even native USB tops out at 256 kB/s.
+- **Observation is intermittent snapshots**: one capture is 80 MS/s × 8192 samples ≈ 100 µs.
+  Nothing is received between captures, so not every packet shows up (peak hold helps).
+- **Passband**: flat to about ±22 MHz around the center; both edges roll off even at 80 MS/s.
+  80 MHz and 160 MHz channels cannot be seen in full at once (use the sweep).
+- **LO leakage on 5 GHz**: above 5.45 GHz the local oscillator leaks into about ±5 MHz around the LO.
+  The sweep avoids it by stitching only the parts 10–20 MHz away from each LO.
+  In live mode, if the channel you watch overlaps the LO, set **LO offset** to ±12 / ±16 MHz.
+- **Gain while sweeping**: AGC would change the gain at every step and cause steps in the trace, so sweeps
+  always use the manual gain (default 60, measured to show the noise floor without saturating easily).
+- **Levels**: dBFS values are uncalibrated relative levels (not dBm).
+- Receive on 5 GHz only within the radio regulations of your country. This firmware does not transmit.
 
-## 协议概览（`espsdr.py`）
+## Protocol overview (`espsdr.py`)
 
-发送以换行结尾的 ASCII 命令，接收文本回复。`CAP16 <n> <rate>` 的回复是
-`DATA <n> <crc32> <µs>`，随后是 `n×2` 字节（有符号 8 位 I、Q 交替），用
-CRC32（zlib 兼容）校验。速率索引 0–5 分别对应 80/40/20/10/8/4 MS/s。
-细节见上游 README 与 `docs/rx-controls.md`。
+Newline-terminated ASCII commands are sent and text replies received. The reply to `CAP16 <n> <rate>` is
+`DATA <n> <crc32> <µs>` followed by `n×2` bytes (signed 8-bit I, Q repeated), verified with
+CRC32 (zlib compatible). Rate indices 0–5 are 80/40/20/10/8/4 MS/s.
+See the upstream README and `docs/rx-controls.md` for details.
 
-## 绘制如何保持流畅
+## How drawing is kept fast
 
-- 一帧之内收到的每次采集都会被折进显示（平均、峰值与瀑布图行），所以绘制再慢也不会丢数据。
-- 坐标轴、刻度与信道条缓存为背景；每帧只重绘曲线与瀑布图图像（matplotlib blitting）。
-- 每秒能观测到的信号量受传输速度限制，约 110–120 k 采样点/秒（约为 80 MS/s 的 0.15%）。
-  单次采集的采样点越少，刷新越快，但每次观测的时间也越短。
+- Every capture received during one frame is folded into the display (average, peak and waterfall rows), so slow drawing never throws data away.
+- Axes, ticks and the channel strip are cached as a background; each frame redraws only the traces and the waterfall image (matplotlib blitting).
+- The signal you can observe per second is limited by the transfer speed to about 110–120 k samples/s (about 0.15% of 80 MS/s).
+  Fewer samples per capture give more updates, but each observation is shorter.
 
-## 致谢
+## Acknowledgements
 
-本项目基于 [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr)。
+This project is based on [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr).
 
-- 运行在 ESP32-C5 上的固件是 esp-sdr 官方预编译镜像，原样使用（由 `flash_c5.py` 从[官方安装器](https://espargos.net/espsdr/app/firmware/)下载）。
-- `espsdr.py` 里的串口协议（命令、`CAP16` 回复格式、速率索引等）是依据 esp-sdr 的 README 与 `docs/rx-controls.md` 实现的。
+- The firmware running on the ESP32-C5 is the official prebuilt esp-sdr image, used as is (downloaded by `flash_c5.py` from the [official installer](https://espargos.net/espsdr/app/firmware/)).
+- The serial protocol in `espsdr.py` (commands, `CAP16` reply format, rate indices etc.) was implemented from the esp-sdr README and `docs/rx-controls.md`.
 
-esp-sdr 固件以 GPL-3.0 分发，源码可从上面的仓库获取。
+The esp-sdr firmware is distributed under GPL-3.0. Its source code is available from the repository above.
 
-## 许可证
+## License
 
-本仓库的代码以 [GNU General Public License v3.0](LICENSE)（GPL-3.0-or-later）发布。
+The code in this repository is released under the [GNU General Public License v3.0](LICENSE) (GPL-3.0-or-later).
 
-主要依赖的许可证（通过 pip 安装，不包含在本仓库中）：
+Licenses of the main dependencies (installed with pip, not included in this repository):
 
-| 库 | 许可证 |
+| Library | License |
 | --- | --- |
 | PySide6 | LGPL-3.0 |
-| PySide6-Fluent-Widgets | GPL-3.0（商业使用需单独授权） |
+| PySide6-Fluent-Widgets | GPL-3.0 (commercial use requires a separate license) |
 | pyqtgraph | MIT |
 | numpy / pyserial | BSD |
-| matplotlib | Matplotlib License（基于 PSF） |
-| esptool | GPL-2.0-or-later（作为独立进程运行） |
+| matplotlib | Matplotlib License (PSF-based) |
+| esptool | GPL-2.0-or-later (run as a separate process) |
