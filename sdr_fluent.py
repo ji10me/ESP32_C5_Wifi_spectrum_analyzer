@@ -26,10 +26,10 @@ import pyqtgraph as pg
 import serial.tools.list_ports
 from PySide6.QtCore import QRectF, Qt, QTimer
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QApplication, QGridLayout, QHBoxLayout, QVBoxLayout, QWidget
-from qfluentwidgets import (BodyLabel, CaptionLabel, ComboBox, CompactSpinBox, FluentIcon, FluentWindow, InfoBar,
+from PySide6.QtWidgets import QApplication, QGridLayout, QHBoxLayout, QSpinBox, QVBoxLayout, QWidget
+from qfluentwidgets import (BodyLabel, CaptionLabel, ComboBox, FluentIcon, FluentWindow, InfoBar,
                             NavigationItemPosition, PlainTextEdit, PrimaryPushButton, PushButton,
-                            SegmentedWidget, SimpleCardWidget, Slider, SmoothScrollArea, SpinBox,
+                            SegmentedWidget, SimpleCardWidget, Slider, SmoothScrollArea,
                             StrongBodyLabel, SubtitleLabel, SwitchButton, Theme, TitleLabel,
                             ToolTipFilter, TransparentToolButton, isDarkTheme, qconfig,
                             setFontFamilies, setTheme, themeColor)
@@ -138,6 +138,53 @@ def switch(checked=True):
     bind(sw.setOffText, "オフ")
     sw.setChecked(checked)
     return sw
+
+
+def spin_qss(dark=None):
+    """Light-weight stylesheet for the numeric inputs, one variant per theme.
+
+    The colours have to live in the stylesheet: under Windows dark mode a
+    FluentWindow inherits a palette whose Base is pure black, so setting the text
+    colour through QPalette gets overridden and the digits fade out in the light
+    theme.
+    """
+    dark = isDarkTheme() if dark is None else dark
+    fg = "#f0f0f0" if dark else "#1a1a1a"
+    border = "rgba(255, 255, 255, 40)" if dark else "rgba(0, 0, 0, 40)"
+    return (
+        "QSpinBox {"
+        f" border: 1px solid {border};"
+        " border-radius: 5px;"
+        " padding: 0 6px;"
+        f" color: {fg};"
+        "}"
+        "QSpinBox:focus { border-bottom: 1px solid #00a7b3; }"
+    )
+
+
+def spin_box():
+    """Numeric input box whose value is actually painted.
+
+    qfluentwidgets' SpinBox (with PySide6 6.12 + qfluentwidgets 1.11) draws the
+    frame and the up/down arrows but not the value text: the field looks empty
+    while .text() / .value() still return the number. It is unrelated to the UI
+    language (Japanese, English and Chinese all behave the same). Only three spin
+    boxes need a number, so use a plain QSpinBox with a light stylesheet - close
+    enough visually, and the digits are guaranteed to be visible.
+    """
+    sp = QSpinBox()
+    sp.setButtonSymbols(QSpinBox.UpDownArrows)   # keep the native arrows
+    sp.setFixedHeight(33)                        # same height as the old compact field
+
+    # qfluentwidgets re-applies its stylesheet on a theme switch; wait until it is
+    # done (themeChangedFinished) and put our stylesheet back, otherwise a
+    # dark/light toggle leaves the field with the invisible default styling.
+    def apply_theme(*_):
+        sp.setStyleSheet(spin_qss())
+
+    apply_theme()
+    qconfig.themeChangedFinished.connect(apply_theme)
+    return sp
 
 
 class StatCard(SimpleCardWidget):
@@ -282,7 +329,7 @@ class SdrPage(QWidget):
         s.row("", self.band_seg)
         self.ch_box = s.row("", ComboBox())
         self.ch_box.currentIndexChanged.connect(self.on_channel)
-        self.freq_spin = s.row("中心", SpinBox())
+        self.freq_spin = s.row("中心", spin_box())
         self.freq_spin.setRange(100, 6000)
         self.freq_spin.setSuffix(" MHz")
         self.freq_spin.setKeyboardTracking(False)
@@ -338,7 +385,7 @@ class SdrPage(QWidget):
         self.dc_sw = switch(True)
         self.dc_sw.checkedChanged.connect(lambda c: self.set_cfg(dc_remove=c))
         s.pair(captioned("チャンネル表示", self.ov_sw), captioned("DC 除去", self.dc_sw))
-        self.ymin_spin, self.ymax_spin = CompactSpinBox(), CompactSpinBox()
+        self.ymin_spin, self.ymax_spin = spin_box(), spin_box()
         for sp, v in ((self.ymin_spin, -75), (self.ymax_spin, -5)):
             sp.setRange(-160, 20)
             sp.setSingleStep(5)
