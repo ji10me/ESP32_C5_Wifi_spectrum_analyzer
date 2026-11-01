@@ -674,7 +674,7 @@ def main():
     ap.add_argument("--freq", type=int, help="start center frequency [MHz]")
     ap.add_argument("--sweep", choices=["2.4", "5"], help="start in band-sweep mode")
     ap.add_argument("--samples", choices=["2048", "4096", "8192", "16380"], help="samples per capture")
-    ap.add_argument("--lang", choices=list(i18n.LANGS), help="UI language (default: last used, else the OS language)")
+    ap.add_argument("--lang", choices=list(i18n.LANGS), help="UI language (default: last used, else English)")
     args = ap.parse_args()
     i18n.set_lang(args.lang or i18n.load_lang(), save=bool(args.lang))
     root = tk.Tk()

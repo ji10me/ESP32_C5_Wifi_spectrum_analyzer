@@ -8,7 +8,7 @@ spectrum, waterfall and packet bursts of the 2.4 GHz and 5 GHz bands.
 - Firmware: the official prebuilt images of [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr) (GPL-3.0)
 - PC app: Python (PySide6 + PySide6-Fluent-Widgets + pyqtgraph; the classic version uses tkinter + matplotlib) — the code in this repository
 - The protocol and implementation are based on [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr) (see [Acknowledgements](#acknowledgements))
-- The UI can be switched between English and Japanese at run time
+- The UI can be switched between English, Japanese and Simplified Chinese at run time (English by default)
 
 ## Screenshots
 
@@ -46,7 +46,7 @@ spectrum, waterfall and packet bursts of the 2.4 GHz and 5 GHz bands.
 - Change the center frequency, channel, gain and so on in the right-hand panel
 - **Click** a graph to place a marker, **double-click** to tune to that frequency, **right-click** to remove the marker
 - **Save I/Q** stores the received data in `recordings/`
-- **Settings** (bottom left) → **Language** switches between English and Japanese instantly; the choice is remembered
+- **Settings** (bottom left) → **Language** switches between English, Japanese and Simplified Chinese instantly; the choice is remembered
 
 If it does not work: if you see "No device running the ESP-SDR firmware was found", check that step 3 completed,
 or give the port explicitly, e.g. `python sdr_fluent.py COM7`.
@@ -59,7 +59,7 @@ or give the port explicitly, e.g. `python sdr_fluent.py COM7`.
 | `sdr_app.py` | Classic GUI (tkinter + matplotlib). Runs without the Qt libraries |
 | `sdr_core.py` | Receive thread and signal processing (shared by both GUIs) |
 | `espsdr.py` | Driver for the ESP-SDR serial protocol (`INFO` / `FREQ` / `GAIN` / `BANDWIDTH` / `CAP16` etc.) |
-| `i18n.py` | UI language (Japanese / English): translation table and run-time switching (shared by both GUIs) |
+| `i18n.py` | UI language (Japanese / English / Simplified Chinese): translation table and run-time switching (shared by both GUIs) |
 | `wifi_channels.py` | 2.4 / 5 GHz Wi-Fi channel tables (20/40/80/160 MHz, U-NII-1 to 4) |
 | `flash_c5.py` | Flashes the firmware onto the ESP32-C5 (with SHA-256 check) |
 | `run_sdr.bat` / `run_sdr_classic.bat` | Launchers for the Fluent / classic version |
@@ -85,7 +85,8 @@ pip install -r requirements.txt     # first time only
 python flash_c5.py COM6             # first time only: download and flash the firmware
 python sdr_fluent.py                # start (port auto-detected); run_sdr.bat does the same
 python sdr_fluent.py --light        # start with the light theme
-python sdr_fluent.py --lang en      # start in English (ja / en; default: last used, first run: OS language)
+python sdr_fluent.py --lang en      # start in English (ja / en / zh; default: last used, first run: English)
+python sdr_fluent.py --lang zh      # start in Simplified Chinese
 python sdr_app.py                   # classic GUI (tkinter)
 python sdr_app.py COM7 --freq 5180  # set port and frequency
 python sdr_app.py COM7 --sweep 5    # start in 5 GHz band sweep (--sweep 2.4 also works)

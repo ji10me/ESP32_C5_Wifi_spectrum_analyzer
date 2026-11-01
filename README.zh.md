@@ -84,7 +84,7 @@ pip install -r requirements.txt     # 仅首次
 python flash_c5.py COM6             # 仅首次：下载并烧写固件
 python sdr_fluent.py                # 启动（端口自动识别）；run_sdr.bat 等价
 python sdr_fluent.py --light        # 以浅色主题启动
-python sdr_fluent.py --lang zh      # 以简体中文启动（ja / en / zh；默认沿用上次选择，首次跟随系统语言）
+python sdr_fluent.py --lang zh      # 以简体中文启动（ja / en / zh；默认沿用上次选择，首次为英语）
 python sdr_fluent.py --lang en      # 以英语启动
 python sdr_app.py                   # 经典界面（tkinter）
 python sdr_app.py COM7 --freq 5180  # 指定端口与频率
