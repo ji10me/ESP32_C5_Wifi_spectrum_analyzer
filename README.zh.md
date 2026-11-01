@@ -7,7 +7,8 @@
 - 固件：[ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr) 官方预编译镜像（GPL-3.0）
 - 上位机：Python（PySide6 + PySide6-Fluent-Widgets + pyqtgraph；经典版用 tkinter + matplotlib），即本仓库的代码
 - 协议与实现参考 [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr)（见[致谢](#致谢)）
-- 界面可在日语 / 英语 / 简体中文之间实时切换
+- 界面可在日语 / 英语 / 简体中文之间实时切换。
+  首次启动时跟随系统语言（日语系统 → 日语，中文系统 → 简体中文，其它 → 英语），之后沿用上次选择
 
 ## 截图
 
@@ -84,7 +85,7 @@ pip install -r requirements.txt     # 仅首次
 python flash_c5.py COM6             # 仅首次：下载并烧写固件
 python sdr_fluent.py                # 启动（端口自动识别）；run_sdr.bat 等价
 python sdr_fluent.py --light        # 以浅色主题启动
-python sdr_fluent.py --lang zh      # 以简体中文启动（ja / en / zh；默认沿用上次选择，首次为英语）
+python sdr_fluent.py --lang zh      # 以简体中文启动（ja / en / zh；默认沿用上次选择，首次跟随系统语言）
 python sdr_fluent.py --lang en      # 以英语启动
 python sdr_app.py                   # 经典界面（tkinter）
 python sdr_app.py COM7 --freq 5180  # 指定端口与频率

@@ -8,6 +8,8 @@ ESP32-C5 の内蔵 Wi-Fi 6 デュアルバンド無線を SDR として使い、
 - ファームウェア: [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr)（GPL-3.0）の公式ビルド済みイメージ
 - PC アプリ: Python（PySide6 + PySide6-Fluent-Widgets + pyqtgraph。旧版は tkinter + matplotlib）。このリポジトリのコード
 - プロトコルと実装は [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr) を参考にしています（[謝辞](#謝辞)）
+- 表示言語は日本語・英語・簡体中国語を実行中に切り替えられます。
+  初回起動時は OS の言語に従います（日本語 → 日本語、中国語 → 簡体中国語、それ以外 → 英語）。以降は前回の選択を使います
 
 ## スクリーンショット
 
@@ -82,7 +84,7 @@ pip install -r requirements.txt     # 初回のみ
 python flash_c5.py COM6             # 初回のみ: ファームウェアをダウンロードして書き込み
 python sdr_fluent.py                # 起動（ポートは自動検出）。run_sdr.bat でも可
 python sdr_fluent.py --light        # ライトテーマで起動
-python sdr_fluent.py --lang en      # 英語で起動（ja / en / zh。指定しなければ前回の言語、初回は英語）
+python sdr_fluent.py --lang en      # 英語で起動（ja / en / zh。指定しなければ前回の言語、初回は OS の言語）
 python sdr_fluent.py --lang zh      # 簡体中国語で起動
 python sdr_app.py                   # 旧 GUI（tkinter）
 python sdr_app.py COM7 --freq 5180  # ポートと周波数を指定

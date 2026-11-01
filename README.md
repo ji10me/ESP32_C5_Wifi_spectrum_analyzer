@@ -8,7 +8,8 @@ spectrum, waterfall and packet bursts of the 2.4 GHz and 5 GHz bands.
 - Firmware: the official prebuilt images of [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr) (GPL-3.0)
 - PC app: Python (PySide6 + PySide6-Fluent-Widgets + pyqtgraph; the classic version uses tkinter + matplotlib) — the code in this repository
 - The protocol and implementation are based on [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr) (see [Acknowledgements](#acknowledgements))
-- The UI can be switched between English, Japanese and Simplified Chinese at run time (English by default)
+- The UI can be switched between English, Japanese and Simplified Chinese at run time.
+  The language on the first run follows the OS language (Japanese / Chinese -> that language, anything else -> English); after that the saved choice is used
 
 ## Screenshots
 
@@ -85,7 +86,7 @@ pip install -r requirements.txt     # first time only
 python flash_c5.py COM6             # first time only: download and flash the firmware
 python sdr_fluent.py                # start (port auto-detected); run_sdr.bat does the same
 python sdr_fluent.py --light        # start with the light theme
-python sdr_fluent.py --lang en      # start in English (ja / en / zh; default: last used, first run: English)
+python sdr_fluent.py --lang en      # start in English (ja / en / zh; default: last used, first run: OS language)
 python sdr_fluent.py --lang zh      # start in Simplified Chinese
 python sdr_app.py                   # classic GUI (tkinter)
 python sdr_app.py COM7 --freq 5180  # set port and frequency
