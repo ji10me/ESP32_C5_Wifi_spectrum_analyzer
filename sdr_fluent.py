@@ -5,7 +5,7 @@ PySide6 + PySide6-Fluent-Widgets for the Windows 11 look (navigation pane,
 Mica, cards, toggle switches) and pyqtgraph for fast plotting. The radio side
 (sdr_core.Worker / espsdr.py) is shared with the tkinter version (sdr_app.py).
 
-Run:  python sdr_fluent.py [COMx] [--freq MHz] [--sweep 2.4|5] [--samples N] [--light] [--lang ja|en]
+Run:  python sdr_fluent.py [COMx] [--freq MHz] [--sweep 2.4|5] [--samples N] [--light] [--lang ja|en|zh]
 """
 import argparse
 import os
@@ -39,6 +39,17 @@ BW_CHOICES = ["最大", "11", "16", "20", "24", "30", "40", "48"]
 LO_CHOICES = ["0", "+12", "-12", "+16", "-16"]
 STAT_CAPTIONS = ("中心周波数", "取得レート", "RMS", "クリップ", "ゲイン")
 CMAPS = ["turbo", "inferno", "viridis", "magma", "plasma"]
+
+
+def ui_fonts():
+    """Font stack for the current language.
+
+    A CJK family has to be in the list: with only Segoe UI / Yu Gothic UI some
+    systems end up drawing Chinese labels as empty boxes.
+    """
+    if i18n.lang() == "zh":
+        return ["Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", "Yu Gothic UI"]
+    return ["Segoe UI", "Yu Gothic UI", "Meiryo UI", "Microsoft YaHei UI"]
 
 
 def tip(widget, text):
@@ -194,7 +205,9 @@ class SdrPage(QWidget):
 
         hdr = QHBoxLayout()
         hdr.setSpacing(8)
-        hdr.addWidget(TitleLabel("Wi-Fi Spectrum"))
+        page_title = TitleLabel()
+        bind(page_title.setText, "Wi-Fi Spectrum")
+        hdr.addWidget(page_title)
         hdr.addSpacing(18)
         self.mode_seg = SegmentedWidget()
         seg_item(self.mode_seg, "live", "ライブ", lambda: self.set_mode("live"))
@@ -1025,7 +1038,10 @@ def main():
     i18n.set_lang(args.lang or i18n.load_lang(), save=bool(args.lang))
 
     app = QApplication(sys.argv)
-    setFontFamilies(["Segoe UI", "Yu Gothic UI", "Meiryo UI"])
+    setFontFamilies(ui_fonts())
+    # Follow a run-time language change as well, otherwise Chinese can end up in a
+    # Latin-only font and is drawn as empty boxes.
+    i18n.on_change(lambda: setFontFamilies(ui_fonts()))
     setTheme(Theme.LIGHT if args.light else Theme.DARK)
     w = MainWindow()
     sdr = w.sdr
