@@ -6,7 +6,7 @@ capture raw I/Q bursts from the ESP32-C5 radio and shows:
   * Live mode   : spectrum, waterfall and time-domain power (packet bursts)
   * Sweep mode  : stitched panorama of the whole 2.4 GHz or 5 GHz Wi-Fi band
                   with per-channel activity
-Run:  python sdr_app.py [COMx] [--freq MHz] [--sweep 2.4|5] [--lang ja|en]
+Run:  python sdr_app.py [COMx] [--freq MHz] [--sweep 2.4|5] [--lang ja|en|zh]
 """
 import argparse
 import queue

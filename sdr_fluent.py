@@ -5,7 +5,7 @@ PySide6 + PySide6-Fluent-Widgets for the Windows 11 look (navigation pane,
 Mica, cards, toggle switches) and pyqtgraph for fast plotting. The radio side
 (sdr_core.Worker / espsdr.py) is shared with the tkinter version (sdr_app.py).
 
-Run:  python sdr_fluent.py [COMx] [--freq MHz] [--sweep 2.4|5] [--samples N] [--light] [--lang ja|en]
+Run:  python sdr_fluent.py [COMx] [--freq MHz] [--sweep 2.4|5] [--samples N] [--light] [--lang ja|en|zh]
 """
 import argparse
 import os
@@ -14,14 +14,22 @@ import sys
 import time
 
 import numpy as np
+
+# pyqtgraph picks its Qt binding in the order PyQt5 -> PySide2 -> PyQt6 -> PySide6.
+# If both PyQt6 and PySide6 are installed it loads PyQt6's Qt6Core.dll first, and
+# the later "import PySide6.QtCore" then reuses that mismatched DLL by name:
+#     ImportError: DLL load failed while importing QtCore
+# Pin the binding before importing pyqtgraph; no need to uninstall PyQt6.
+os.environ.setdefault("PYQTGRAPH_QT_LIB", "PySide6")
+
 import pyqtgraph as pg
 import serial.tools.list_ports
 from PySide6.QtCore import QRectF, Qt, QTimer
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QApplication, QGridLayout, QHBoxLayout, QVBoxLayout, QWidget
-from qfluentwidgets import (BodyLabel, CaptionLabel, ComboBox, CompactSpinBox, FluentIcon, FluentWindow, InfoBar,
+from PySide6.QtWidgets import QApplication, QGridLayout, QHBoxLayout, QSpinBox, QVBoxLayout, QWidget
+from qfluentwidgets import (BodyLabel, CaptionLabel, ComboBox, FluentIcon, FluentWindow, InfoBar,
                             NavigationItemPosition, PlainTextEdit, PrimaryPushButton, PushButton,
-                            SegmentedWidget, SimpleCardWidget, Slider, SmoothScrollArea, SpinBox,
+                            SegmentedWidget, SimpleCardWidget, Slider, SmoothScrollArea,
                             StrongBodyLabel, SubtitleLabel, SwitchButton, Theme, TitleLabel,
                             ToolTipFilter, TransparentToolButton, isDarkTheme, qconfig,
                             setFontFamilies, setTheme, themeColor)
@@ -39,6 +47,17 @@ BW_CHOICES = ["最大", "11", "16", "20", "24", "30", "40", "48"]
 LO_CHOICES = ["0", "+12", "-12", "+16", "-16"]
 STAT_CAPTIONS = ("中心周波数", "取得レート", "RMS", "クリップ", "ゲイン")
 CMAPS = ["turbo", "inferno", "viridis", "magma", "plasma"]
+
+
+def ui_fonts():
+    """Font stack for the current language.
+
+    A CJK family has to be in the list: with only Segoe UI / Yu Gothic UI some
+    systems end up drawing Chinese labels as empty boxes.
+    """
+    if i18n.lang() == "zh":
+        return ["Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", "Yu Gothic UI"]
+    return ["Segoe UI", "Yu Gothic UI", "Meiryo UI", "Microsoft YaHei UI"]
 
 
 def tip(widget, text):
@@ -121,6 +140,53 @@ def switch(checked=True):
     return sw
 
 
+def spin_qss(dark=None):
+    """Light-weight stylesheet for the numeric inputs, one variant per theme.
+
+    The colours have to live in the stylesheet: under Windows dark mode a
+    FluentWindow inherits a palette whose Base is pure black, so setting the text
+    colour through QPalette gets overridden and the digits fade out in the light
+    theme.
+    """
+    dark = isDarkTheme() if dark is None else dark
+    fg = "#f0f0f0" if dark else "#1a1a1a"
+    border = "rgba(255, 255, 255, 40)" if dark else "rgba(0, 0, 0, 40)"
+    return (
+        "QSpinBox {"
+        f" border: 1px solid {border};"
+        " border-radius: 5px;"
+        " padding: 0 6px;"
+        f" color: {fg};"
+        "}"
+        "QSpinBox:focus { border-bottom: 1px solid #00a7b3; }"
+    )
+
+
+def spin_box():
+    """Numeric input box whose value is actually painted.
+
+    qfluentwidgets' SpinBox (with PySide6 6.12 + qfluentwidgets 1.11) draws the
+    frame and the up/down arrows but not the value text: the field looks empty
+    while .text() / .value() still return the number. It is unrelated to the UI
+    language (Japanese, English and Chinese all behave the same). Only three spin
+    boxes need a number, so use a plain QSpinBox with a light stylesheet - close
+    enough visually, and the digits are guaranteed to be visible.
+    """
+    sp = QSpinBox()
+    sp.setButtonSymbols(QSpinBox.UpDownArrows)   # keep the native arrows
+    sp.setFixedHeight(33)                        # same height as the old compact field
+
+    # qfluentwidgets re-applies its stylesheet on a theme switch; wait until it is
+    # done (themeChangedFinished) and put our stylesheet back, otherwise a
+    # dark/light toggle leaves the field with the invisible default styling.
+    def apply_theme(*_):
+        sp.setStyleSheet(spin_qss())
+
+    apply_theme()
+    qconfig.themeChangedFinished.connect(apply_theme)
+    return sp
+
+
 class StatCard(SimpleCardWidget):
     def __init__(self, caption, parent=None):
         super().__init__(parent)
@@ -194,7 +260,9 @@ class SdrPage(QWidget):
 
         hdr = QHBoxLayout()
         hdr.setSpacing(8)
-        hdr.addWidget(TitleLabel("Wi-Fi Spectrum"))
+        page_title = TitleLabel()
+        bind(page_title.setText, "Wi-Fi Spectrum")
+        hdr.addWidget(page_title)
         hdr.addSpacing(18)
         self.mode_seg = SegmentedWidget()
         seg_item(self.mode_seg, "live", "ライブ", lambda: self.set_mode("live"))
@@ -261,7 +329,7 @@ class SdrPage(QWidget):
         s.row("", self.band_seg)
         self.ch_box = s.row("", ComboBox())
         self.ch_box.currentIndexChanged.connect(self.on_channel)
-        self.freq_spin = s.row("中心", SpinBox())
+        self.freq_spin = s.row("中心", spin_box())
         self.freq_spin.setRange(100, 6000)
         self.freq_spin.setSuffix(" MHz")
         self.freq_spin.setKeyboardTracking(False)
@@ -317,7 +385,7 @@ class SdrPage(QWidget):
         self.dc_sw = switch(True)
         self.dc_sw.checkedChanged.connect(lambda c: self.set_cfg(dc_remove=c))
         s.pair(captioned("チャンネル表示", self.ov_sw), captioned("DC 除去", self.dc_sw))
-        self.ymin_spin, self.ymax_spin = CompactSpinBox(), CompactSpinBox()
+        self.ymin_spin, self.ymax_spin = spin_box(), spin_box()
         for sp, v in ((self.ymin_spin, -75), (self.ymax_spin, -5)):
             sp.setRange(-160, 20)
             sp.setSingleStep(5)
@@ -1025,7 +1093,10 @@ def main():
     i18n.set_lang(args.lang or i18n.load_lang(), save=bool(args.lang))
 
     app = QApplication(sys.argv)
-    setFontFamilies(["Segoe UI", "Yu Gothic UI", "Meiryo UI"])
+    setFontFamilies(ui_fonts())
+    # Follow a run-time language change as well, otherwise Chinese can end up in a
+    # Latin-only font and is drawn as empty boxes.
+    i18n.on_change(lambda: setFontFamilies(ui_fonts()))
     setTheme(Theme.LIGHT if args.light else Theme.DARK)
     w = MainWindow()
     sdr = w.sdr
