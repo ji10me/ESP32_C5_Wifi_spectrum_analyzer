@@ -14,6 +14,14 @@ import sys
 import time
 
 import numpy as np
+
+# pyqtgraph picks its Qt binding in the order PyQt5 -> PySide2 -> PyQt6 -> PySide6.
+# If both PyQt6 and PySide6 are installed it loads PyQt6's Qt6Core.dll first, and
+# the later "import PySide6.QtCore" then reuses that mismatched DLL by name:
+#     ImportError: DLL load failed while importing QtCore
+# Pin the binding before importing pyqtgraph; no need to uninstall PyQt6.
+os.environ.setdefault("PYQTGRAPH_QT_LIB", "PySide6")
+
 import pyqtgraph as pg
 import serial.tools.list_ports
 from PySide6.QtCore import QRectF, Qt, QTimer
