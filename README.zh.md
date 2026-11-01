@@ -7,19 +7,19 @@
 - 固件：[ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr) 官方预编译镜像（GPL-3.0）
 - 上位机：Python（PySide6 + PySide6-Fluent-Widgets + pyqtgraph；经典版用 tkinter + matplotlib），即本仓库的代码
 - 协议与实现参考 [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr)（见[致谢](#致谢)）
-- 界面可在日语 / 英语之间实时切换
+- 界面可在日语 / 英语 / 简体中文之间实时切换
 
 ## 截图
 
 **实时模式（2.4 GHz，ch6）**：频谱（峰值保持与平均）、瀑布图，以及单次采集内接收功率随时间的变化
 
-![实时模式 2.4 GHz](docs/screenshot_live_2.4ghz.png)
+![实时模式 2.4 GHz](docs/screenshot_live_2.4ghz.zh.png)
 
 **频段扫描（5 GHz，5150–5895 MHz）**：整段频谱，以及每个 20 MHz 信道的活动度与检出率
 
-![频段扫描 5 GHz](docs/screenshot_sweep_5ghz.png)
+![频段扫描 5 GHz](docs/screenshot_sweep_5ghz.zh.png)
 
-（截图为日语界面。）
+（截图为简体中文界面。）
 
 ## 快速开始
 
@@ -45,7 +45,7 @@
 - 在右侧面板修改中心频率、信道、增益等
 - 在图上 **单击** 放置标记，**双击** 调谐到该频率，**右键** 清除标记
 - **保存 I/Q** 把接收数据存到 `recordings/`
-- 左下 **设置** → **语言** 可在日语 / 英语之间即时切换，选择会被记住
+- 左下 **设置** → **语言** 可在日语 / 英语 / 简体中文之间即时切换，选择会被记住
 
 跑不起来时：如果提示 “No device running the ESP-SDR firmware was found”，先确认第 3 步已完成，
 或者显式给出端口，例如 `python sdr_fluent.py COM7`。
@@ -58,7 +58,7 @@
 | `sdr_app.py` | 经典界面（tkinter + matplotlib）。不装 Qt 库也能运行 |
 | `sdr_core.py` | 接收线程与信号处理（两个界面共用） |
 | `espsdr.py` | ESP-SDR 串口协议驱动（`INFO` / `FREQ` / `GAIN` / `BANDWIDTH` / `CAP16` 等） |
-| `i18n.py` | 界面语言（日语 / 英语）：翻译表与运行时切换（两个界面共用） |
+| `i18n.py` | 界面语言（日语 / 英语 / 简体中文）：翻译表与运行时切换（两个界面共用） |
 | `wifi_channels.py` | 2.4 / 5 GHz Wi-Fi 信道表（20/40/80/160 MHz，U-NII-1 ~ 4） |
 | `flash_c5.py` | 把固件写入 ESP32-C5（带 SHA-256 校验） |
 | `run_sdr.bat` / `run_sdr_classic.bat` | Fluent 版 / 经典版的启动脚本 |
@@ -84,7 +84,8 @@ pip install -r requirements.txt     # 仅首次
 python flash_c5.py COM6             # 仅首次：下载并烧写固件
 python sdr_fluent.py                # 启动（端口自动识别）；run_sdr.bat 等价
 python sdr_fluent.py --light        # 以浅色主题启动
-python sdr_fluent.py --lang en      # 以英语启动（ja / en；默认沿用上次选择，首次跟随系统语言）
+python sdr_fluent.py --lang zh      # 以简体中文启动（ja / en / zh；默认沿用上次选择，首次跟随系统语言）
+python sdr_fluent.py --lang en      # 以英语启动
 python sdr_app.py                   # 经典界面（tkinter）
 python sdr_app.py COM7 --freq 5180  # 指定端口与频率
 python sdr_app.py COM7 --sweep 5    # 启动即做 5 GHz 频段扫描（--sweep 2.4 亦可）
